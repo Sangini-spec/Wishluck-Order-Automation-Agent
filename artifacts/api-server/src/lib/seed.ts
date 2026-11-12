@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { prisma, json } from "./db";
 import { logger } from "./logger";
+import { applySeedRevision } from "./seed-revision";
 export const expectedCounts = {customers:30,products:6,orders:30,inventory:23,shipments:21,shipmentEvents:70,returns:9,refunds:3,codConfirmations:7,orderItems:31,historicalReturns:3};
 export function validateSeed(d:any) {
   for(const [entity,key] of [["customers","customer_id"],["products","sku"],["orders","order_id"],["shipments","shipment_id"],["returns","return_id"],["refunds","refund_id"],["cod_confirmations","order_id"],["pincode_serviceability","pincode"]]){
@@ -20,7 +21,8 @@ export function validateSeed(d:any) {
   const variants=new Set<string>();for(const i of d.inventory){const p:any=products.get(i.sku),key=`${i.sku}/${i.size}`;if(!p||!p.sizes.includes(i.size)||variants.has(key)||i.available<0)throw new Error("Invalid inventory");variants.add(key);}
   const events=d.shipments.flatMap((s:any)=>s.events.map((e:any)=>e.event_id));if(new Set(events).size!==events.length)throw new Error("Duplicate shipment event ID");
   const counts={customers:d.customers.length,products:d.products.length,orders:d.orders.length,inventory:d.inventory.length,shipments:d.shipments.length,shipmentEvents:events.length,returns:d.returns.length,refunds:d.refunds.length,codConfirmations:d.cod_confirmations.length,orderItems:d.orders.reduce((s:number,o:any)=>s+o.items.length,0),historicalReturns:d.customers.reduce((s:number,c:any)=>s+(c.return_history_last_60_days?.length||0),0)};
-  for(const [key,n] of Object.entries(expectedCounts))if(counts[key as keyof typeof counts]!==n)throw new Error(`Expected ${n} ${key}, found ${counts[key as keyof typeof counts]}. Source file changed; review required.`);
+  const expected=d.dataset_metadata.version==="2.0.0"?{...expectedCounts,shipmentEvents:74,returns:12,refunds:4,historicalReturns:6}:expectedCounts;
+  for(const [key,n] of Object.entries(expected))if(counts[key as keyof typeof counts]!==n)throw new Error(`Expected ${n} ${key}, found ${counts[key as keyof typeof counts]}. Source file changed; review required.`);
   return counts;
 }
 export function qualityIssues(d:any) {
@@ -29,12 +31,12 @@ export function qualityIssues(d:any) {
   for(const c of d.customers){
     if(/\s/.test(c.email))add(c.customer_id,"INVALID_CONTACT_EMAIL","Fictional seed email contains whitespace; retained unchanged, not used as an authentication identity.");
     if(c.is_first_time_customer&&c.cod_refusals_last_12_months)add(c.customer_id,"AMBIGUOUS_FIRST_TIME","First-time flag coexists with previous COD refusals. Both source signals retained.");
-    for(const h of c.return_history_last_60_days||[])if(!orders.has(h.order_id))add(c.customer_id,"HISTORICAL_ORDER_MISSING",`${h.return_id} refers to absent ${h.order_id}; preserved as external historical evidence.`);
+    for(const h of c.return_history_last_60_days||[])if(!orders.has(h.order_id)&&h.reference_scope!=="EXTERNAL_HISTORY")add(c.customer_id,"HISTORICAL_ORDER_MISSING",`${h.return_id} refers to absent ${h.order_id}; preserved as external historical evidence.`);
   }
   for(const s of d.shipments){
     const o=orders.get(s.order_id)!;
     for(const e of s.events){
-      if(e.status==="DELIVERED"&&e.occurred_at!==o.delivered_at)add(o.order_id,"DELIVERY_DATE_CONFLICT","Order delivery date differs from courier delivery event. Imported eligibility uses the order date; both retained.");
+      if(e.status==="DELIVERED"&&new Date(e.occurred_at).getTime()!==new Date(o.delivered_at).getTime())add(o.order_id,"DELIVERY_DATE_CONFLICT","Order delivery date differs from courier delivery event. Imported eligibility uses the order date; both retained.");
       if(new Date(e.occurred_at)>new Date(d.dataset_metadata.generated_at))add(o.order_id,"FUTURE_COURIER_EVENT",`${e.event_id} is after dataset generation; imported, not replayed.`);
     }
     if(s.attempt_count>s.events.filter((e:any)=>e.status==="DELIVERY_FAILED").length)add(o.order_id,"INCOMPLETE_ATTEMPT_HISTORY","Attempt count exceeds failure events in timeline. No omitted events were fabricated.");
@@ -49,14 +51,13 @@ export function qualityIssues(d:any) {
     if(o.payment.status==="REFUNDED"&&!d.refunds.some((r:any)=>r.order_id===o.order_id))add(o.order_id,"REFUND_RECORD_MISSING","Payment is refunded but no detailed refund record was supplied.");
   }
   for(const r of d.refunds){
-    if(!d.returns.some((x:any)=>x.order_id===r.order_id))add(r.order_id,"RETURN_LINK_MISSING","Refund has no matching source return. Return/QC timing must not be invented.");
+    if(!d.returns.some((x:any)=>x.order_id===r.order_id)&&r.type!=="GOODWILL_REQUEST")add(r.order_id,"RETURN_LINK_MISSING","Refund has no matching source return. Return/QC timing must not be invented.");
     if(new Date(r.requested_at)<new Date(orders.get(r.order_id)!.delivered_at))add(r.order_id,"REFUND_BEFORE_DELIVERY","Refund request timestamp precedes delivery; preserved as source evidence.");
     if(r.method==="BANK_TRANSFER_OR_STORE_CREDIT")add(r.order_id,"PAYOUT_METHOD_UNSPECIFIED","Completed refund does not specify which COD payout option was selected.");
-    if(r.amount>orders.get(r.order_id)!.payment.total)add(r.order_id,"GOODWILL_EXCEEDS_ORDER","Requested amount exceeds order total; manual review is required.");
+    if(r.amount>orders.get(r.order_id)!.payment.total&&!(r.type==="GOODWILL_REQUEST"&&r.status==="MANUAL_REVIEW"))add(r.order_id,"GOODWILL_EXCEEDS_ORDER","Requested amount exceeds order total; manual review is required.");
   }
   for(const r of d.returns)if(r.eligible_by_window!==(r.delivered_days_ago<=7))add(r.order_id,"WINDOW_FLAG_CONFLICT","Source window flag disagrees with supplied relative delivery age; deterministic policy recomputes eligibility.");
-  add("WL10236","SOURCE_RISK_BAND_CONFLICT","Exact ₹4,600 high-risk scenario is labelled MEDIUM in source. Source preserved; live deterministic assessment shown separately.");
-  add("DATASET","MISSING_SIZE_CHART","Only size labels were supplied, not measurements. No body-measurement recommendation may be fabricated.");
+  if(d.cod_confirmations.find((x:any)=>x.order_id==="WL10236")?.risk_band!=="HIGH")add("WL10236","SOURCE_RISK_BAND_CONFLICT","Exact ₹4,600 high-risk scenario must have a high risk assessment.");
   return out;
 }
 export async function seed() {
@@ -65,6 +66,11 @@ export async function seed() {
   const originalText=readFileSync(file,"utf8"),d=JSON.parse(originalText),counts=validateSeed(d),hash=createHash("sha256").update(originalText).digest("hex");
   const existing=await prisma.seedDataset.findUnique({where:{id:"wishluck-source"}});
   if(existing){
+    if(existing.hash!==hash&&d.dataset_metadata.version==="2.0.0"&&d.dataset_metadata.original_sha256===existing.hash){
+      const issues=qualityIssues(d);if(issues.length)throw new Error("Corrected seed failed relationship/policy validation.");
+      await prisma.$transaction(t=>applySeedRevision(t,existing,d,hash,originalText,issues),{timeout:60000});
+      logger.info({counts,hash},"Applied authorized demo corrections without resetting runtime data");return counts;
+    }
     if(existing.hash!==hash)throw new Error("Seed content differs from imported source. Refusing to overwrite live/source records.");
     await prisma.$transaction(async t=>{
       await t.policyVersion.createMany({data:[{id:"wishluck-policy-v1",seedDatasetId:existing.id,version:d.dataset_metadata.version,document:d.policy}],skipDuplicates:true});
@@ -74,6 +80,11 @@ export async function seed() {
   }
   await prisma.$transaction(async t=>{
     await t.seedDataset.create({data:{id:"wishluck-source",hash,name:d.dataset_metadata.name,originalText,metadata:d.dataset_metadata,notes:d.notes,policy:d.policy,scenarios:d.demo_scenarios}});
+    if(d.dataset_metadata.original_sha256){
+      const archive=resolve(file,"../original/wishluck_seed_data.json"),raw=readFileSync(archive,"utf8"),a=JSON.parse(raw);
+      if(createHash("sha256").update(raw).digest("hex")!==d.dataset_metadata.original_sha256)throw new Error("Archived original upload does not match the declared reference hash.");
+      await t.seedDataset.create({data:{id:"wishluck-original",hash:d.dataset_metadata.original_sha256,name:a.dataset_metadata.name,originalText:raw,metadata:a.dataset_metadata,notes:a.notes,policy:a.policy,scenarios:a.demo_scenarios}});
+    }
     await t.policyVersion.create({data:{id:"wishluck-policy-v1",seedDatasetId:"wishluck-source",version:d.dataset_metadata.version,document:d.policy}});
     for(const p of d.products)await t.product.create({data:{sku:p.sku,name:p.name,category:p.category,price:p.price,sizes:p.sizes,returnable:p.returnable,exchangeable:p.exchangeable,notes:p.notes,sourceRecord:p}});
     for(const c of d.customers){

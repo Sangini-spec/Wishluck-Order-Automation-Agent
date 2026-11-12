@@ -1,1 +1,1 @@
-- [Seed preservation and assignment conflicts](source-data-decisions.md) — preserve contradictions as evidence; separate source facts from live risk, policies and runtime tests.
+- [Demo data corrections](source-data-decisions.md) — user authorized assignment-aligned corrections; keep original separately and avoid seed-error commentary in the app.

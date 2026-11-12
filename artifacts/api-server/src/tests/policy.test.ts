@@ -39,7 +39,7 @@ test("risk explainability",()=>assert.equal(scoreRisk({total:4600,first:true,ref
 test("low risk established customer",()=>assert.equal(scoreRisk({total:827,first:false,refusals:0,weakAddress:false,codAvailable:true,recentOrders:1}).band,"LOW"));
 test("phone format comparison",()=>assert.equal(phoneDigits("+91-9000010005"),"9000010005"));
 test("redaction removes structured contacts",()=>assert.deepEqual(redact({phone:"9000010005",shippingAddress:{line1:"House 1"},email:"demo@example.test"}),{phone:"[REDACTED]",shippingAddress:"[REDACTED]",email:"[REDACTED]"}));
-const d=JSON.parse(readFileSync(resolve(process.cwd(),"../../data/wishluck_seed_data.json"),"utf8"));
+const d=JSON.parse(readFileSync(resolve(process.cwd(),"../../data/original/wishluck_seed_data.json"),"utf8"));
 test("full source counts and references validate",()=>{const c=validateSeed(d);assert.equal(c.orderItems,31);assert.equal(c.shipmentEvents,70);assert.equal(c.historicalReturns,3);});
 test("seed detects duplicate IDs",()=>{const x=structuredClone(d);x.orders[1].order_id=x.orders[0].order_id;assert.throws(()=>validateSeed(x),/duplicate/);});
 test("seed detects broken owner reference",()=>{const x=structuredClone(d);x.refunds[0].customer_id="CUST-1001";assert.throws(()=>validateSeed(x),/ownership/);});

@@ -122,7 +122,8 @@ test("signed courier webhook is idempotent; bad signature cannot mutate",async()
 test("imported source relationships and IDs still exist after workflow simulations",async()=>{
   assert.equal(await prisma.order.count({where:{isEvaluation:false,isDemo:false}}),30);
   assert.equal(await prisma.customer.count({where:{id:{startsWith:"CUST-1"}}}),30);
-  assert.equal(await prisma.returnRecord.count(),9);
-  assert.equal(await prisma.refund.count(),3);
-  assert.equal((await prisma.seedDataset.findUniqueOrThrow({where:{id:"wishluck-source"}})).hash,"b494fd9ec725a12ae6a937de54b12fa9ba11c0965ac2520b8eb5020f4adac196");
+  assert.equal(await prisma.returnRecord.count(),12);
+  assert.equal(await prisma.refund.count(),4);
+  assert.equal((await prisma.seedDataset.findUniqueOrThrow({where:{id:"wishluck-original"}})).hash,"b494fd9ec725a12ae6a937de54b12fa9ba11c0965ac2520b8eb5020f4adac196");
+  assert.equal(await prisma.dataQualityIssue.count(),0);
 });

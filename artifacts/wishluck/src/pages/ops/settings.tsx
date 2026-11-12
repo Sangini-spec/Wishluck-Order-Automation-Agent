@@ -34,7 +34,7 @@ export default function SettingsPage() {
   const counts = rec(ds?.counts);
   return (
     <>
-      <PageHeader kicker="Controls" title="Settings and dataset" sub="Tune workflow timing and risk bands. Verify the imported dataset is intact." />
+      <PageHeader kicker="Controls" title="Workflow settings" sub="Tune reminders and risk bands. Review store policies and demo records." />
       <div className="grid gap-4 xl:grid-cols-[1.1fr_1fr]">
         <div className="space-y-4">
           {s.error ? <ErrorState error={s.error} retry={s.refetch} /> : s.isLoading || !s.data ? <Rows n={5} h="h-16" /> : (
@@ -79,15 +79,10 @@ export default function SettingsPage() {
                   ))}
                 </div>
               </Panel>
-              <Panel title={`Import warnings (${ds.warnings.length})`}>
-                {ds.warnings.length === 0 ? <p className="text-sm text-muted-foreground">No warnings recorded on import.</p> : (
-                  <ul className="max-h-72 space-y-1.5 overflow-auto text-sm">{arr(ds.warnings).map((w, i) => <li key={i} className="flex gap-2"><span className="font-data text-xs text-[hsl(32_80%_30%)]">{str(w.code)}</span><span>{str(w.detail ?? w.message)}</span>{!!w.orderId && <span className="font-data text-xs text-muted-foreground">{str(w.orderId)}</span>}</li>)}</ul>
-                )}
-              </Panel>
               <Panel title={`Scenarios (${ds.scenarios.length})`}>
                 {ds.scenarios.length === 0 ? <p className="text-sm text-muted-foreground">No scenarios tagged.</p> : (
                   <ul className="max-h-80 space-y-2 overflow-auto">{arr(ds.scenarios).map((sc, i) => (
-                    <li key={i} className="rounded-lg border p-2.5 text-sm"><div className="flex items-center gap-2"><span className="font-medium">{str(sc.name ?? sc.tag ?? sc.id)}</span>{!!sc.orderId && <span className="font-data text-xs text-muted-foreground">{str(sc.orderId)}</span>}</div>{!!sc.description && <p className="mt-0.5 text-xs text-muted-foreground">{str(sc.description)}</p>}</li>
+                    <li key={i} className="rounded-lg border p-2.5 text-sm"><div className="flex items-center gap-2"><span className="font-medium">{str(sc.scenario ?? sc.name ?? sc.tag ?? sc.id)}</span>{!!(sc.order_id ?? sc.orderId) && <span className="font-data text-xs text-muted-foreground">{str(sc.order_id ?? sc.orderId)}</span>}</div>{!!(sc.expected ?? sc.description) && <p className="mt-0.5 text-xs text-muted-foreground">{str(sc.expected ?? sc.description)}</p>}</li>
                   ))}</ul>
                 )}
               </Panel>

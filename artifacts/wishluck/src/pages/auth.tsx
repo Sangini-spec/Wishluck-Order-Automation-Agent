@@ -25,7 +25,7 @@ const IDENTITIES = [
 const LEDGER = [
   ['WL10236', '₹4,600 COD scenario', 'explore in Ops'],
   ['Courier', 'Trigger a failed delivery', 'demo control'],
-  ['Risk', 'Compare source and live score', 'reasons shown'],
+  ['Risk', 'Understand COD risk', 'reasons shown'],
   ['Chat', 'Verify order ID + phone', 'then fetch'],
   ['Handover', 'Ask for a support person', 'ticket created'],
 ];

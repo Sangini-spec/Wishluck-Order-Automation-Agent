@@ -100,7 +100,7 @@ export default function ProfilePage() {
                 <div className="grid h-12 w-12 place-items-center rounded-xl border border-dashed border-indigo/30 bg-accent text-indigo"><Lock className="h-5 w-5" /></div>
                 <h2 className="font-display text-2xl font-semibold">This identity is read-only</h2>
                 <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-                  You are signed in as a fictional customer from the imported source dataset. Its phone number and address are part of the seed data that orders, risk scores and chat verification depend on, so they cannot be edited here. Seed records stay exactly as imported.
+                  This shared demo identity has fixed contact details so anyone can try the same support scenarios. Register your own Customer account to save your phone number and delivery address.
                 </p>
                 <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
                   To change a delivery address on a specific order, ask in the help chat after verifying with your order ID and full phone number. To try profile editing, register a new Customer account from the sign-in page.

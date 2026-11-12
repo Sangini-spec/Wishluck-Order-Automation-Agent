@@ -1,5 +1,7 @@
 # Actual WishLuck agent evaluation
 
+This is a recorded run against the initial dataset, before the later authorized data corrections. See `docs/demo-data-corrections.md` for the current seed and regression checks; these results have not been represented as a new LLM evaluation of that revision.
+
 Run: 2026-11-12T09:28:05.076Z
 
 29/30 passed. Tool expectations: 97%. Outcome checks: 100%. Average case time: 2585ms. Input/output tokens: 89249/2650. Cost: not calculated.

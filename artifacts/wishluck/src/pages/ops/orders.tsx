@@ -22,7 +22,7 @@ export default function Orders() {
   const statuses = dash?.orderStatuses.map((s) => s.name) ?? [];
   return (
     <>
-      <PageHeader kicker="Ledger" title="Orders" sub="Search by order ID, customer name or phone. Seed warnings travel with each order.">
+      <PageHeader kicker="Ledger" title="Orders" sub="Search orders, review fulfillment and follow up with customers.">
         <CreateTestOrder />
       </PageHeader>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row">
@@ -55,7 +55,6 @@ export default function Orders() {
                       <Link href={`/ops/orders/${o.id}`} data-testid={`link-order-${o.id}`} className="font-data font-medium text-indigo group-hover:underline">{o.id}</Link>
                       <div className="mt-0.5 flex gap-1">
                         {o.isDemo && <Pill value="Test order" t="indigo" />}
-                        {arr(o.warnings).length > 0 && <Pill value={`${arr(o.warnings).length} warnings`} t="turmeric" />}
                         {o.scenarioTag && <span className="font-data text-[10px] text-muted-foreground">{o.scenarioTag}</span>}
                       </div>
                     </td>

@@ -3,8 +3,8 @@ name: Seed preservation and assignment conflicts
 description: Why the original WishLuck source cannot be cleaned up to satisfy assignment examples.
 ---
 
-Preserve the supplied seed exactly, including contradictory labels and incomplete historical relationships. Use separate derived assessments and explicit runtime scenarios when an assignment test expectation cannot be demonstrated by the source as given.
+Use corrected, assignment-aligned demo records in the application. Keep the original upload separately as an immutable reference; do not repeatedly show seed-data problems in the evaluator-facing interface.
 
-**Why:** The user explicitly required the assignment to be reviewed against their master plan before building, a complete entity/record mapping, and no discarding, overwriting or simplifying the supplied dataset. The source's ₹4,600 COD example has a MEDIUM source label and a stronger structured address than the assignment's high-risk example; rewriting it would hide the mismatch.
+**Why:** The user initially prohibited changes to the upload, then explicitly authorized fixing the seed against the assignment and applying those fixes in the app. They said, “I don't want to show errors in data or in seed data in the application itself.”
 
-**How to apply:** Before changing source import behavior or test fixtures, check the checked-in data audit. Keep raw source evidence, source labels, live deterministic decisions and runtime/evaluation records distinct. Never silently infer historical orders or line-item relationships from sparse source records.
+**How to apply:** Use the corrected demo as the active seed, document authored corrections in developer notes and preserve the original for reference. Apply seed revisions without resetting user-created orders, chats or confirmed runtime actions; abort on conflicting changes. Genuine policy denials such as a non-COD pincode remain normal operational states, not data-error banners.

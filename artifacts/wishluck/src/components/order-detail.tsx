@@ -17,7 +17,7 @@ export function Warnings({ order }: { order: Order }) {
   return (
     <div data-testid="list-warnings" className="rounded-xl border border-turmeric/50 bg-turmeric/10 p-3">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[hsl(32_80%_30%)]">
-        <AlertTriangle className="h-3.5 w-3.5" /> Seed data warnings ({w.length})
+        <AlertTriangle className="h-3.5 w-3.5" /> Order checks need attention
       </div>
       <ul className="space-y-1 text-sm">
         {w.map((x, i) => (

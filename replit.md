@@ -25,7 +25,7 @@ Fictional evaluator app: a customer storefront/chat and team order-operations ce
 
 ## Architecture decisions
 
-- Preserve source records verbatim, including contradictions. Never rewrite the 30 imported orders merely to make tests pass.
+- The user authorized assignment-aligned corrections. Use the corrected active seed; retain the exact original separately. Do not show recurring seed-error commentary in the interface or reset runtime activity when applying corrections.
 - Use an advancing 2026-11-12 demo clock for imported policy scenarios; job delays use real elapsed seconds for short test timings.
 - Source returns with status NONE are not active requests. Real actions require verified order scope and atomic single-use consent.
 - Demo TEAM access is intentional only in isolated demo mode/development, never granted by merely selecting a role in the UI.
@@ -37,12 +37,12 @@ Fictional evaluator app: a customer storefront/chat and team order-operations ce
 
 ## User preferences
 
-- The uploaded assignment is authoritative; import all seed JSON entities and preserve every source ID, field and contradiction.
+- The assignment is authoritative. Preserve every original entity ID and the archived upload, while correcting demo inconsistencies in the active data.
 
 ## Gotchas
 
-- Seed customer emails are intentionally invalid; authentication identities are separate.
-- WL10236 is ₹4,600 with a MEDIUM *source* risk band. Live scoring is separate; do not silently relabel it.
+- Corrected fictional contact emails and authentication identities remain separate; never auto-link accounts on email/name.
+- WL10236 is exactly ₹4,600, with “near Shiv mandir” and HIGH risk to match the assignment.
 - `generated-artifacts/` is ignored; record the evaluation summary in `docs/agent-evaluation.md`.
 
 ## Pointers

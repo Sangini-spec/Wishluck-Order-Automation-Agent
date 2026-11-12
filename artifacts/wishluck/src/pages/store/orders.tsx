@@ -18,7 +18,7 @@ export default function MyOrders() {
         <p className="mt-1 text-sm text-muted-foreground">Need help with one? Open the chat and share the order ID with your phone number.</p>
       </div>
       {error ? <ErrorState error={error} retry={refetch} /> : isLoading ? <Rows n={4} h="h-20" /> : !data?.length ? (
-        <Empty icon={<Receipt className="h-6 w-6" />} title="No orders yet" body="This identity has no orders in the dataset." action={<Link href="/store" data-testid="link-shop" className="rounded-lg bg-indigo px-3 py-1.5 text-sm text-paper">Browse the shop</Link>} />
+        <Empty icon={<Receipt className="h-6 w-6" />} title="No orders yet" body="Orders created for your account will appear here. You can browse products or ask us for help." action={<Link href="/store" data-testid="link-shop" className="rounded-lg bg-indigo px-3 py-1.5 text-sm text-paper">Browse the shop</Link>} />
       ) : (
         <ul className="space-y-3">
           {data.map((o) => {

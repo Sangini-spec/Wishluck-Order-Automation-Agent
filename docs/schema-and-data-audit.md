@@ -1,3 +1,7 @@
+# Historical pre-build audit
+
+This document records the **original upload review**, not unresolved problems in the current app. The user later authorized corrections. See [the current dataset and correction record](demo-data-corrections.md) for active counts and behavior.
+
 # WishLuck: assignment review and pre-implementation data contract
 
 ## Decision

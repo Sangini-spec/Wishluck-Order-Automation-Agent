@@ -2,7 +2,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { EventEmitter } from "node:events";
 import type { Prisma } from "@prisma/client";
 import { prisma, json, policyNow, HttpError, demoMode } from "./db";
-import { scoreRisk, codEligibility, shippingFee, prepaidQuote, redact } from "./policy";
+import { scoreRisk, codEligibility, shippingFee, prepaidQuote, redact, phoneDigits } from "./policy";
 export const events=new EventEmitter();events.setMaxListeners(200);
 export const refresh=()=>events.emit("refresh");
 export const orderInclude={customer:true,payment:true,items:true,shipments:{include:{events:{orderBy:{occurredAt:"asc" as const}}}},returns:true,refunds:true,cod:true} satisfies Prisma.OrderInclude;
@@ -117,6 +117,8 @@ export async function codRespond(orderId:string,input:any){
 export async function createTestOrder(input:any,webhookId?:string){
   const p=await prisma.product.findUnique({where:{sku:input.sku}}),c=await prisma.customer.findUnique({where:{id:input.customerId}});
   if(!p||!c||!p.sizes.includes(input.size))throw new HttpError(400,"Choose an existing customer, product and valid size.");
+  const address=c.address as any;
+  if(phoneDigits(c.phone).length!==10||!address?.line1||!address?.city||!address?.state||!/^\d{6}$/.test(address?.pincode||""))throw new HttpError(400,"Ask this customer to complete their phone number and delivery address in Profile before creating an order.");
   const id=webhookId?`DEMO-HOOK-${createHash("sha256").update(webhookId).digest("hex").slice(0,10).toUpperCase()}`:`DEMO-${randomUUID().slice(0,8).toUpperCase()}`,subtotal=Number(p.price)*input.quantity,ship=shippingFee(subtotal),cod=input.paymentMethod==="COD"?49:0;
   await prisma.$transaction(async t=>{
     await t.$queryRaw`SELECT id FROM "Customer" WHERE id=${c.id} FOR UPDATE`;
