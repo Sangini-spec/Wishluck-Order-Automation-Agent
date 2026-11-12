@@ -1,5 +1,10 @@
 # Wishluck — Order Automation Agent
 
+## Live app & demo recording
+
+- **[Open the deployed Wishluck app](https://wishluck-ai-order-operations.replit.app)**
+- **[Watch the demo recording](https://drive.google.com/file/d/1qJLIXaLm50ieBF50dJkI0cSKiDP4jlRl/view?usp=drive_link)**
+
 Node.js + React + OpenAI support agent for an Indian apparel store: customer checkout, COD confirmation, failed-delivery follow-up, returns/exchanges, human handover and operational analytics.
 
 All bundled customer details and orders are fictional. Courier events and payments are simulated. Web chat is implemented; WhatsApp and a real courier are not connected.
