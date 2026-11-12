@@ -5,7 +5,7 @@ export const courierResponseSchema=z.object({
   orderId:z.string(),retryDate:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   landmark:z.string().min(2).max(150).optional(),phone:z.string().optional(),pincode:z.string().regex(/^\d{6}$/).optional(),
   address:z.object({line1:z.string().min(3),city:z.string().min(2),state:z.string().min(2),pincode:z.string().regex(/^\d{6}$/)}).optional(),
-  refuse:z.boolean().optional(),reason:z.string().max(200).optional(),
+  refuse:z.boolean().optional(),reason:z.string().trim().min(1).max(200).optional(),
 });
 export async function validateCourierResponse(t:any,o:any,value:unknown){
   const a=courierResponseSchema.parse(value);
@@ -41,10 +41,16 @@ export async function acknowledgeCourierInstruction(t:any,instructionId:string){
     occurredAt:policyNow(),source:"MOCK_COURIER_API",sourceIndex:await t.shipmentEvent.count({where:{shipmentId:command.shipmentId}}),
   }});
   await t.nDRCase.update({where:{id:command.ndrCaseId},data:{status:a.refuse?"RTO_REQUESTED":"REATTEMPT_REQUESTED"}});
+  const instructionSummary=[
+    a.retryDate&&`retry on ${a.retryDate}`,
+    a.address&&`corrected address: ${a.address.line1}, ${a.address.city}, ${a.address.pincode}`,
+    a.landmark&&`landmark: ${a.landmark}`,
+    a.phone&&`alternate phone ending ${a.phone.replace(/\D/g,"").slice(-4)}`,
+  ].filter(Boolean).join("; ");
   await t.order.update({where:{id:o.id},data:{
     ...(a.refuse?{status:"RTO_REQUESTED"}:{}),
     ...(!a.refuse&&(a.address||a.landmark)?{shippingAddress:json({...o.shippingAddress,...a.address,...(a.landmark?{landmark:a.landmark}:{})})}:{}),
-    notes:{push:a.refuse?`Mock courier ${acknowledgementId}: RTO requested; ${a.reason}`:`Mock courier ${acknowledgementId}: retry instructions acknowledged${a.retryDate?` for ${a.retryDate}`:""}.`},
+    notes:{push:a.refuse?`Mock courier ${acknowledgementId}: RTO requested; ${a.reason}`:`Mock courier ${acknowledgementId}: retry instructions acknowledged; ${instructionSummary}.`},
   }});
   return t.courierInstruction.update({where:{id:command.id},data:{status:"ACKNOWLEDGED",acknowledgementId,acknowledgedAt:new Date()}});
 }

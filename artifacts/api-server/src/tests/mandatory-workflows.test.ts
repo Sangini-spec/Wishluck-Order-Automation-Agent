@@ -82,3 +82,67 @@ test("NDR consent rechecks the date and delivered cases do not trigger stale han
   await runJob(`ndr-check:failure2-${o.id}`);
   const ticket=await prisma.supportTicket.count({where:{conversation:{orderId:o.id}}});assert.equal(ticket,0);
 });
+
+test("NDR escalates two unanswered failures, but not one failure or a customer clarification",async()=>{
+  for(const replied of [false,true]){
+    const {o,c}=await fixture();
+    await prisma.order.update({where:{id:o.id},data:{status:"IN_TRANSIT",fulfillmentStatus:"FULFILLED"}});
+    const first=`unanswered-first-${o.id}`,second=`unanswered-second-${o.id}`;
+    await courierEvent(o.id,{status:"DELIVERY_FAILED",reason:"CUSTOMER_NOT_AVAILABLE",eventId:first});
+    await runJob(`ndr-check:${first}`);
+    assert.equal(await prisma.supportTicket.count({where:{conversationId:c.id}}),0);
+    await courierEvent(o.id,{status:"DELIVERY_FAILED",reason:"CUSTOMER_NOT_AVAILABLE",eventId:second});
+    if(replied)await prisma.message.create({data:{conversationId:c.id,role:"user",content:"I am checking which day I can receive it."}});
+    await runJob(`ndr-check:${second}`);
+    await runJob(`ndr-check:${second}`);
+    assert.equal(await prisma.supportTicket.count({where:{conversationId:c.id}}),replied?0:1);
+    assert.equal((await prisma.conversation.findUniqueOrThrow({where:{id:c.id}})).status,replied?"AI_HANDLING":"NEEDS_HUMAN");
+  }
+});
+
+test("NDR refusal requires a reason and records acknowledged RTO without inventing delivery",async()=>{
+  const {o,ctx}=await fixture();
+  await prisma.order.update({where:{id:o.id},data:{status:"IN_TRANSIT",fulfillmentStatus:"FULFILLED"}});
+  await courierEvent(o.id,{status:"DELIVERY_FAILED",reason:"CUSTOMER_NOT_AVAILABLE",eventId:`refusal-${o.id}`});
+  const rejected=await executeTool(ctx,"submit_ndr_response",{orderId:o.id,refuse:true});
+  assert.match(rejected.error,/refusal reason/);
+  const proposal=await executeTool(ctx,"submit_ndr_response",{orderId:o.id,refuse:true,reason:"Customer travelling; no longer needs the order"});
+  assert.equal(proposal.requiresConfirmation,true);
+  await prisma.message.create({data:{conversationId:ctx.conversationId,role:"user",content:"YES"}});
+  await commitPending(ctx);
+  const command=await prisma.courierInstruction.findFirstOrThrow({where:{orderId:o.id}});
+  await runJob(`ndr-submit:${command.consentId}`);
+  const acknowledged=await prisma.courierInstruction.findUniqueOrThrow({where:{id:command.id}});
+  assert.equal(acknowledged.status,"ACKNOWLEDGED");
+  assert.match(acknowledged.acknowledgementId!,/^MOCK-ACK-/);
+  const updated=await prisma.order.findUniqueOrThrow({where:{id:o.id}});
+  assert.equal(updated.status,"RTO_REQUESTED");
+  assert.ok(updated.notes.some(n=>n.includes("Customer travelling")));
+  await runJob(`ndr-check:refusal-${o.id}`);
+  assert.equal(await prisma.supportTicket.count({where:{conversationId:ctx.conversationId}}),0);
+});
+
+test("NDR rejects invalid instructions and records alternate phone and landmark on the order",async()=>{
+  const {o,ctx}=await fixture();
+  await prisma.order.update({where:{id:o.id},data:{status:"IN_TRANSIT",fulfillmentStatus:"FULFILLED"}});
+  await courierEvent(o.id,{status:"DELIVERY_FAILED",reason:"ADDRESS_NOT_FOUND",eventId:`instructions-${o.id}`});
+  for(const invalid of [
+    {retryDate:new Date(policyNow().getTime()+5*86400000).toISOString().slice(0,10)},
+    {phone:"12345"},
+    {address:{line1:"House 22",city:"Delhi",state:"Delhi",pincode:"000000"}},
+    {refuse:true,reason:"   "},
+  ]){
+    const rejected=await executeTool(ctx,"submit_ndr_response",{orderId:o.id,...invalid});
+    assert.ok(rejected.error);
+  }
+  assert.equal(await prisma.pendingAction.count({where:{conversationId:ctx.conversationId,status:"PENDING"}}),0);
+  const proposed=await executeTool(ctx,"submit_ndr_response",{orderId:o.id,phone:"+91-9000019999",landmark:"Security desk"});
+  assert.equal(proposed.requiresConfirmation,true);
+  await prisma.message.create({data:{conversationId:ctx.conversationId,role:"user",content:"YES"}});
+  await commitPending(ctx);
+  const command=await prisma.courierInstruction.findFirstOrThrow({where:{orderId:o.id}});
+  await runJob(`ndr-submit:${command.consentId}`);
+  const updated=await prisma.order.findUniqueOrThrow({where:{id:o.id}});
+  assert.ok(updated.notes.some(n=>n.includes("alternate phone ending 9999")&&n.includes("Security desk")));
+  assert.equal((command.payload as any).phone,"+91-9000019999");
+});

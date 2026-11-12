@@ -47,7 +47,12 @@ export async function runJob(jobId:string){
       }
     }else if(job.kind==="NDR_CHECK"){
       const ndr=await t.nDRCase.findUnique({where:{eventId:p.eventId}});
-      if(o.status==="DELIVERY_FAILED"&&ndr?.status==="AWAITING_CUSTOMER"&&ndr.attemptCount>=2)await handover(p.conversationId,"Two failed delivery attempts without a response",undefined,t);
+      if(o.status==="DELIVERY_FAILED"&&ndr?.status==="AWAITING_CUSTOMER"&&ndr.attemptCount>=2){
+        // An incomplete/clarifying reply is still a response. Do not confuse
+        // "instructions not submitted yet" with the assignment's "no response".
+        const response=await t.message.findFirst({where:{conversationId:p.conversationId,role:"user",createdAt:{gte:ndr.createdAt}},select:{id:true}});
+        if(!response)await handover(p.conversationId,"Two failed delivery attempts without a response",undefined,t);
+      }
     }
     await t.outboxJob.update({where:{id:jobId},data:{state:"DONE",lockedUntil:null}});
   },{timeout:15000});refresh();
