@@ -6,6 +6,24 @@ info:
 servers:
   - url: /api
 paths:
+  /store-assets/{filename}:
+    get:
+      operationId: getStoreProductImage
+      parameters:
+        - in: path
+          name: filename
+          required: true
+          schema:
+            type: string
+            enum: [kurta.jpg, graphic-tee.jpg, jeans.jpg, briefs.jpg, tote.jpg, sale-tee.jpg]
+      responses:
+        "200":
+          description: Public generated catalog product photograph
+          content:
+            image/jpeg:
+              schema: { type: string, format: binary }
+        "404":
+          description: Unknown product image
   /healthz:
     get:
       operationId: healthCheck

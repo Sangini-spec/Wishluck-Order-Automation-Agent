@@ -13,13 +13,13 @@ export function useSession() {
   return useGetSession({ query: { queryKey: getGetSessionQueryKey(), retry: false, staleTime: 30000 } });
 }
 
-function Wordmark({ light }: { light?: boolean }) {
+function Wordmark({ light, store }: { light?: boolean; store?: boolean }) {
   return (
     <span className="flex items-center gap-2">
       <span className={cn('grid h-7 w-7 place-items-center rounded-md', light ? 'bg-turmeric text-indigo' : 'bg-indigo text-turmeric')}>
         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor"><path d="M12 2l2.6 6.4L21 11l-6.4 2.6L12 20l-2.6-6.4L3 11l6.4-2.6z" /></svg>
       </span>
-      <span className="font-display text-lg font-semibold tracking-tight">WishLuck</span>
+      <span className="font-display text-lg font-semibold tracking-tight">{store ? 'Wishluck Store' : 'WishLuck'}</span>
     </span>
   );
 }
@@ -153,15 +153,15 @@ function StoreFrame({ session, children }: { session: SessionInfo; children: Rea
         <div className="marquee flex w-max gap-12 whitespace-nowrap">
           {Array.from({ length: 2 }).map((_, i) => (
             <span key={i} className="flex gap-12">
-              <span>Explore the WishLuck collection</span><span>Cash on delivery where available</span>
-              <span>Ask our assistant about any order</span><span>Easy exchanges on eligible styles</span>
+              <span>Wishluck Store everyday edit</span><span>Cash on delivery where available</span>
+              <span>Ask our assistant about any order</span><span>Return and exchange rules shown on every product</span>
             </span>
           ))}
         </div>
       </div>
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 md:px-6">
-          <Link href="/store" data-testid="link-store-home"><Wordmark /></Link>
+          <Link href="/store" data-testid="link-store-home" className="shrink-0"><Wordmark store /></Link>
           <nav className="flex gap-1 overflow-x-auto text-sm">
             <Link href="/store" data-testid="link-catalogue" className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5', loc === '/store' || loc.startsWith('/store/product') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')}><ShoppingBag className="h-4 w-4" />Shop</Link>
             <Link href="/store/orders" data-testid="link-my-orders" className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5', loc === '/store/orders' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')}><Receipt className="h-4 w-4" />My orders</Link>

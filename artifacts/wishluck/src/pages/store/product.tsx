@@ -4,7 +4,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Check, Loader2, Minus, Plus, RefreshCw, ShoppingBag, Undo2, X } from 'lucide-react';
 import { useGetProducts, useGetCart, useChangeCart, getGetCartQueryKey } from '@workspace/api-client-react';
 import { useToast } from '@/hooks/use-toast';
-import { Motif, Rows, ErrorState, Empty } from '@/components/kit';
+import { ProductImage } from '@/components/product-image';
+import { Rows, ErrorState, Empty } from '@/components/kit';
 import { inr, errMsg } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -31,11 +32,11 @@ export default function ProductPage() {
       {error ? <ErrorState error={error} retry={refetch} /> : isLoading ? <Rows n={2} h="h-64" /> : !p ? (
         <Empty icon={<X className="h-6 w-6" />} title="Style not found" body={`No product with SKU ${sku}.`} action={<Link href="/store" data-testid="link-shop" className="rounded-lg border px-3 py-1.5 text-sm">Browse the shop</Link>} />
       ) : (
-        <div className="grid gap-10 md:grid-cols-2">
-          <div className="rise overflow-hidden rounded-2xl border bg-secondary"><Motif seed={p.sku} label={p.name} className="aspect-[5/6] w-full" /></div>
+        <div className="grid gap-8 md:grid-cols-2 md:gap-12">
+          <div className="rise h-fit overflow-hidden rounded-2xl border bg-secondary md:sticky md:top-24"><ProductImage sku={p.sku} name={p.name} eager className="aspect-[5/6] w-full" /></div>
           <div className="rise" style={{ animationDelay: '80ms' }}>
             <div className="font-data text-xs text-muted-foreground">{p.sku} · {p.category}</div>
-            <h1 className="font-display mt-2 text-4xl font-semibold">{p.name}</h1>
+            <h1 className="font-display mt-2 text-4xl font-semibold leading-tight md:text-5xl">{p.name}</h1>
             <div className="font-data mt-3 text-2xl">{inr(p.price)}</div>
             <div className="mt-8">
               <div className="mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Size and stock</div>
@@ -72,7 +73,8 @@ export default function ProductPage() {
                 );
               })()}
             </div>
-            <ul className="mt-8 space-y-2 text-sm">
+            <div className="mt-8 mb-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">Returns and delivery</div>
+            <ul className="space-y-2 rounded-2xl border bg-card p-4 text-sm">
               <li className="flex items-center gap-2">{p.returnable ? <Undo2 className="h-4 w-4 text-leaf" /> : <X className="h-4 w-4 text-madder" />}{p.returnable ? 'Returnable within policy window' : 'Not returnable'}</li>
               <li className="flex items-center gap-2">{p.exchangeable ? <RefreshCw className="h-4 w-4 text-leaf" /> : <X className="h-4 w-4 text-madder" />}{p.exchangeable ? 'Size exchange available' : 'No exchanges'}</li>
               <li className="flex items-center gap-2"><Check className="h-4 w-4 text-indigo" />Cash on delivery where eligible</li>

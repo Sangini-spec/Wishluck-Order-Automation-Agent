@@ -2,7 +2,8 @@ import { Link } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, ArrowRight, Loader2, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useGetCart, useChangeCart, getGetCartQueryKey } from '@workspace/api-client-react';
-import { Motif, Rows, ErrorState, Empty, KV } from '@/components/kit';
+import { ProductImage } from '@/components/product-image';
+import { Rows, ErrorState, Empty, KV } from '@/components/kit';
 import { useToast } from '@/hooks/use-toast';
 import { inr, errMsg } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -37,7 +38,7 @@ export default function CartPage() {
               const over = i.quantity > i.available;
               return (
                 <li key={`${i.sku}-${i.size}`} data-testid={`row-cart-${i.sku}-${i.size}`} className="rise flex gap-4 rounded-2xl border bg-card p-3" style={{ animationDelay: `${idx * 50}ms` }}>
-                  <Link href={`/store/product/${i.sku}`} className="w-20 shrink-0 overflow-hidden rounded-xl bg-secondary sm:w-24"><Motif seed={i.sku} className="aspect-[5/6] w-full" /></Link>
+                  <Link href={`/store/product/${i.sku}`} className="w-20 shrink-0 overflow-hidden rounded-xl bg-secondary sm:w-24"><ProductImage sku={i.sku} name={i.name} className="aspect-[5/6] w-full" /></Link>
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex items-start gap-2">
                       <div className="min-w-0 flex-1">

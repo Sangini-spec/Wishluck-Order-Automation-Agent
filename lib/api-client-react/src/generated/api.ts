@@ -87,6 +87,101 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
+export const getGetStoreProductImageUrl = (filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg',) => {
+
+
+
+
+  return `/api/store-assets/${filename}`
+}
+
+export const getStoreProductImage = async (filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetStoreProductImageUrl(filename),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStoreProductImageQueryKey = (filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg',) => {
+    return [
+    `/api/store-assets/${filename}`
+    ] as const;
+    }
+
+
+export const getGetStoreProductImageQueryOptions = <TData = Awaited<ReturnType<typeof getStoreProductImage>>, TError = ErrorType<void>>(filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStoreProductImageQueryKey(filename);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStoreProductImage>>> = ({ signal }) => getStoreProductImage(filename, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: filename !== null && filename !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetStoreProductImageQueryResult = NonNullable<Awaited<ReturnType<typeof getStoreProductImage>>>
+export type GetStoreProductImageQueryError = ErrorType<void>
+
+
+export function useGetStoreProductImage<TData = Awaited<ReturnType<typeof getStoreProductImage>>, TError = ErrorType<void>>(
+ filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStoreProductImage>>,
+          TError,
+          Awaited<ReturnType<typeof getStoreProductImage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoreProductImage<TData = Awaited<ReturnType<typeof getStoreProductImage>>, TError = ErrorType<void>>(
+ filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStoreProductImage>>,
+          TError,
+          Awaited<ReturnType<typeof getStoreProductImage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetStoreProductImage<TData = Awaited<ReturnType<typeof getStoreProductImage>>, TError = ErrorType<void>>(
+ filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetStoreProductImage<TData = Awaited<ReturnType<typeof getStoreProductImage>>, TError = ErrorType<void>>(
+ filename: 'kurta.jpg' | 'graphic-tee.jpg' | 'jeans.jpg' | 'briefs.jpg' | 'tote.jpg' | 'sale-tee.jpg', options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getStoreProductImage>>, TError, TData>>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetStoreProductImageQueryOptions(filename,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getHealthCheckUrl = () => {
 
 

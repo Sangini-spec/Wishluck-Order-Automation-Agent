@@ -6,6 +6,7 @@ import {
   useGetCart, useGetProfile, useGetCheckoutQuote, useSubmitCheckout, getGetCartQueryKey,
   type CheckoutQuote, type CheckoutDetailsPaymentMethod,
 } from '@workspace/api-client-react';
+import { ProductImage } from '@/components/product-image';
 import { Rows, ErrorState, Empty, KV } from '@/components/kit';
 import { AddressFields, addressErrors, emptyAddress, phoneError, toAddressJson, type AddressForm } from '@/components/address-fields';
 import { Input } from '@/components/ui/input';
@@ -156,7 +157,7 @@ export default function CheckoutPage() {
           </div>
           <ul className="mt-3 space-y-2 text-sm">
             {items.map((i) => (
-              <li key={`${i.sku}-${i.size}`} className="flex gap-2"><span className="min-w-0 flex-1 truncate">{i.name} <span className="text-muted-foreground">· {i.size} x {i.quantity}</span></span><span className="font-data">{inr(i.lineTotal)}</span></li>
+              <li key={`${i.sku}-${i.size}`} className="flex items-center gap-2"><span className="w-10 shrink-0 overflow-hidden rounded-md bg-secondary"><ProductImage sku={i.sku} name={i.name} className="aspect-[5/6] w-full" /></span><span className="min-w-0 flex-1 truncate">{i.name} <span className="text-muted-foreground">· {i.size} x {i.quantity}</span></span><span className="font-data">{inr(i.lineTotal)}</span></li>
             ))}
           </ul>
           <div className="rule-dotted my-3" />
