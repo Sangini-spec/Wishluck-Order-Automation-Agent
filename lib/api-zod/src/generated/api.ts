@@ -8,13 +8,6 @@
 import * as zod from 'zod';
 
 
-export const GetStoreProductImageParams = zod.object({
-  "filename": zod.enum(['kurta.jpg', 'graphic-tee.jpg', 'jeans.jpg', 'briefs.jpg', 'tote.jpg', 'sale-tee.jpg'])
-})
-
-export const GetStoreProductImageResponse = zod.unknown()
-
-
 export const HealthCheckResponse = zod.object({
   "status": zod.string()
 })

@@ -1,5 +1,0 @@
-- [Demo data corrections](source-data-decisions.md) — user authorized assignment-aligned corrections; keep original separately and avoid seed-error commentary in the app.
-- [Customer-led orders](customer-order-flow.md) — normal orders should originate in customer cart/checkout; Operations monitors and handles COD exceptions.
-- [Assignment authority](assignment-authority.md) — the AI automation assignment governs mandatory scope and stack; product improvements must not replace required behavior or deliverables.
-- [Demo time consistency](demo-time-consistency.md) — restarts and separate processes must share business-policy time; queue/session elapsed deadlines remain real-time.
-- [Support tickets and Inbox](support-inbox-boundary.md) — tickets record human handovers; all conversation handling belongs in the Inbox.

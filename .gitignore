@@ -56,6 +56,9 @@ Thumbs.db
 /generated-artifacts/
 /.conversation/
 /attached_assets/generated_images/wishluck-*.jpg
+/attached_assets/
+/artifacts/mockup-sandbox/
+/.agents/
 .env
 .env.*
 !.env.example

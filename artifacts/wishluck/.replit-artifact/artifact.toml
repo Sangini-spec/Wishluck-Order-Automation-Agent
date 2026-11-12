@@ -8,16 +8,16 @@ router = "path"
 
 [[services]]
 name = "web"
-paths = [ "/" ]
+paths = ["/"]
 localPort = 26074
 
 [services.development]
 run = "pnpm --filter @workspace/wishluck run dev"
 
 [services.production]
-build = [ "pnpm", "--filter", "@workspace/wishluck", "run", "build" ]
+build = ["pnpm", "--filter", "@workspace/wishluck", "run", "build"]
 serve = "static"
-publicDir = "artifacts/wishluck/dist/public"
+publicDir = "frontend/dist/public"
 
 [[services.production.rewrites]]
 from = "/*"

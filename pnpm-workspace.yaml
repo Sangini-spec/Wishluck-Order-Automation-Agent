@@ -1,4 +1,7 @@
 packages:
+  - backend
+  - frontend
+  # Local-only design canvas, ignored in the submission; preserves its Replit workflow.
   - artifacts/*
   - lib/*
   - lib/integrations/*

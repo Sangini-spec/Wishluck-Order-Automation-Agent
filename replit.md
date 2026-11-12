@@ -1,50 +1,14 @@
-# WishLuck AI Order Operations
+# Wishluck workspace
 
-Fictional evaluator app: a customer storefront/chat and team order-operations center with a shared Node.js API and lossless seed data.
-
-## Run & Operate
-
-- Web workflow: `artifacts/wishluck: web` (`/`); API workflow: `artifacts/api-server: API Server` (`/api`).
-- `pnpm --filter @workspace/api-server exec prisma generate --schema prisma/schema.prisma` then `pnpm --filter @workspace/api-server exec prisma migrate dev --schema prisma/schema.prisma` for an empty development database.
-- `pnpm --filter @workspace/api-server run db:seed` idempotently imports the entire unmodified JSON and demo identities.
-- `pnpm --filter @workspace/api-spec run codegen` after changing the API contract; `pnpm run typecheck` checks all packages.
-- `pnpm --filter @workspace/api-server run test` and `pnpm --filter @workspace/api-server run evaluate` exercise policies/webhooks/workflows and 30 real LLM conversations.
-- Required runtime env: managed `DATABASE_URL`, `SESSION_SECRET` for webhook protection, Replit AI Integrations OpenAI variables. Optional `WEBHOOK_SECRET` and `DEMO_MODE`.
-
-## Stack
-
-- pnpm workspaces, Node.js 24, React/Vite, Express 5, TypeScript, PostgreSQL + Prisma, Zod, Orval and esbuild.
-- Operational jobs use a durable PostgreSQL outbox with leases, retries and deduplication instead of a separate Redis deployment.
-
-## Where things live
-
-- Frontend: `artifacts/wishluck/src/`; backend: `artifacts/api-server/src/`.
-- Schema/migrations: `artifacts/api-server/prisma/`; source JSON: `data/wishluck_seed_data.json`.
-- OpenAPI: `lib/api-spec/openapi.yaml`; generated hooks: `lib/api-client-react/`.
-- Architecture, demo flow and known limits: `README.md`; data audit: `docs/schema-and-data-audit.md`; agent results: `docs/agent-evaluation.md`.
-
-## Architecture decisions
-
-- The user authorized assignment-aligned corrections. Use the corrected active seed; retain the exact original separately. Do not show recurring seed-error commentary in the interface or reset runtime activity when applying corrections.
-- Use an advancing 2026-11-12 demo clock for imported policy scenarios; job delays use real elapsed seconds for short test timings.
-- Source returns with status NONE are not active requests. Real actions require verified order scope and atomic single-use consent.
-- Demo TEAM access is intentional only in isolated demo mode/development, never granted by merely selecting a role in the UI.
-
-## Product
-
-- Customers browse products, add variants/quantities to a persistent cart, check out with an entered phone/address, respond to COD confirmation, simulate payment outcomes, inspect their own orders and chat in English/Hindi/Hinglish. Checkout prices and ownership are server-controlled; idempotency and atomic inventory reservations protect submissions.
-- Customer checkout automatically creates Operations orders, COD risk assessments and durable confirmation/reminder/hold jobs. The team monitors them, reviews chats and tool traces, takes over exceptions and configures timing. Team-created test orders are auxiliary evaluator tools.
-
-## User preferences
-
-- The assignment is authoritative. Preserve every original entity ID and the archived upload, while correcting demo inconsistencies in the active data.
-
-## Gotchas
-
-- Corrected fictional contact emails and authentication identities remain separate; never auto-link accounts on email/name.
-- WL10236 is exactly ₹4,600, with “near Shiv mandir” and HIGH risk to match the assignment.
-- `generated-artifacts/` is ignored; record the evaluation summary in `docs/agent-evaluation.md`.
-
-## Pointers
-
-- See `README.md` for full setup, security, exact record counts and evaluation limitations.
+- Application source: `backend/` (Express/Prisma) and `frontend/` (React/Vite).
+- Shared typed contracts and OpenAI client remain under `lib/`.
+- Managed service descriptors stay under `artifacts/api-server/.replit-artifact/` and `artifacts/wishluck/.replit-artifact/`; they run the corresponding workspace packages from their new source locations.
+- API package `@workspace/api-server`; frontend package `@workspace/wishluck`.
+- Use Prisma migrations for the existing PostgreSQL store. Do not use the legacy shared Drizzle package to push schema changes.
+- The only seed file is `data/wishluck_seed_data.json`. Do not restore obsolete original-data archives or correction scripts.
+- Preserve runtime orders/chats and use marked evaluation fixtures for testing.
+- OpenAPI source: `lib/api-spec/openapi.yaml`; regenerate clients after contract changes.
+- Root commands: `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm evaluate`.
+- Demo messaging, courier and payments are simulations. WhatsApp is not connected.
+- Support tickets are an escalation index; all conversation handling belongs in Inbox.
+- Uploaded source documents/screenshots and the design sandbox are local-only and ignored by Git.
