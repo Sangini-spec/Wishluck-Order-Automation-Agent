@@ -1,0 +1,1 @@
+- [Seed preservation and assignment conflicts](source-data-decisions.md) — preserve contradictions as evidence; separate source facts from live risk, policies and runtime tests.

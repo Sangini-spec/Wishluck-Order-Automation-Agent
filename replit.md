@@ -1,45 +1,50 @@
-# [Project name]
+# WishLuck AI Order Operations
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Fictional evaluator app: a customer storefront/chat and team order-operations center with a shared Node.js API and lossless seed data.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Web workflow: `artifacts/wishluck: web` (`/`); API workflow: `artifacts/api-server: API Server` (`/api`).
+- `pnpm --filter @workspace/api-server exec prisma generate --schema prisma/schema.prisma` then `pnpm --filter @workspace/api-server exec prisma migrate dev --schema prisma/schema.prisma` for an empty development database.
+- `pnpm --filter @workspace/api-server run db:seed` idempotently imports the entire unmodified JSON and demo identities.
+- `pnpm --filter @workspace/api-spec run codegen` after changing the API contract; `pnpm run typecheck` checks all packages.
+- `pnpm --filter @workspace/api-server run test` and `pnpm --filter @workspace/api-server run evaluate` exercise policies/webhooks/workflows and 30 real LLM conversations.
+- Required runtime env: managed `DATABASE_URL`, `SESSION_SECRET` for webhook protection, Replit AI Integrations OpenAI variables. Optional `WEBHOOK_SECRET` and `DEMO_MODE`.
 
 ## Stack
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- pnpm workspaces, Node.js 24, React/Vite, Express 5, TypeScript, PostgreSQL + Prisma, Zod, Orval and esbuild.
+- Operational jobs use a durable PostgreSQL outbox with leases, retries and deduplication instead of a separate Redis deployment.
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Frontend: `artifacts/wishluck/src/`; backend: `artifacts/api-server/src/`.
+- Schema/migrations: `artifacts/api-server/prisma/`; source JSON: `data/wishluck_seed_data.json`.
+- OpenAPI: `lib/api-spec/openapi.yaml`; generated hooks: `lib/api-client-react/`.
+- Architecture, demo flow and known limits: `README.md`; data audit: `docs/schema-and-data-audit.md`; agent results: `docs/agent-evaluation.md`.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Preserve source records verbatim, including contradictions. Never rewrite the 30 imported orders merely to make tests pass.
+- Use an advancing 2026-11-12 demo clock for imported policy scenarios; job delays use real elapsed seconds for short test timings.
+- Source returns with status NONE are not active requests. Real actions require verified order scope and atomic single-use consent.
+- Demo TEAM access is intentional only in isolated demo mode/development, never granted by merely selecting a role in the UI.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Customers can browse six products, inspect own orders, manage new-account profiles and chat in English/Hindi/Hinglish.
+- The team can review live chats and tool traces, take over, inspect source warnings and risk, simulate COD/courier events and configure timing settings.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- The uploaded assignment is authoritative; import all seed JSON entities and preserve every source ID, field and contradiction.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Seed customer emails are intentionally invalid; authentication identities are separate.
+- WL10236 is ₹4,600 with a MEDIUM *source* risk band. Live scoring is separate; do not silently relabel it.
+- `generated-artifacts/` is ignored; record the evaluation summary in `docs/agent-evaluation.md`.
 
 ## Pointers
 
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- See `README.md` for full setup, security, exact record counts and evaluation limitations.

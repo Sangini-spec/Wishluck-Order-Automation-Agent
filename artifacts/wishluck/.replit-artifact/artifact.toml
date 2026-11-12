@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "WishLuck — Order Operations"
+description = "WishLuck's AI order operations and customer support platform. A persistent, evaluator-ready storefront and operations center with safe AI chat, COD confirmation, courier simulation and human handover."
+version = "1.0.0"
+id = "artifacts/wishluck"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 26074
+
+[services.development]
+run = "pnpm --filter @workspace/wishluck run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/wishluck", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/wishluck/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "26074"
+BASE_PATH = "/"

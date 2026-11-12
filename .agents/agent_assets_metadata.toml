@@ -1,0 +1,17 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "jhlJi2fL6_bHuDG3GeMy7"
+uri = "file://.local/conversation-workspace/files/wishluck-schema-and-assignment-review.md"
+type = "text"
+title = "WishLuck — schema, dataset audit and plan review"
+description = "Complete entity and field mapping, verified source counts, relationship discrepancies, non-destructive import rules and corrections to the implementation plan."
+logical_id = "2617549b-a145-4771-8bf1-9212a9d9f5a4"
+content_hash = "sha256:33ec990b292fcae643101df9edc230333c7d0c3f3e7fd1483d505f2acc58c9f9"
+size = 23391
+mtime_ms = 1794473887465
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/conversation:ada103ab-8802-44c9-861e-480260426f32/2617549b-a145-4771-8bf1-9212a9d9f5a4/e252ea30-85b0-4f7a-98b9-2707fa5972d5"
+storage_version_token = "1794473904627833"
+content_type = "text/markdown"
+source_uri = "file://wishluck-schema-and-assignment-review.md"

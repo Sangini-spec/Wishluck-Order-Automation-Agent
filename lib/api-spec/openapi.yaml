@@ -1,36 +1,607 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: WishLuck evaluator demo. Authenticated sessions, original seed data and safe operational workflows.
 servers:
   - url: /api
-    description: Base API path
-tags:
-  - name: health
-    description: Health operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
-      summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/HealthStatus"
+              schema: { $ref: "#/components/schemas/HealthStatus" }
+  /auth/me:
+    get:
+      operationId: getSession
+      responses:
+        "200":
+          description: Current session
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionInfo" }
+  /auth/demo:
+    post:
+      operationId: demoLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DemoAccess" }
+      responses:
+        "200":
+          description: Demo session created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionInfo" }
+  /auth/login:
+    post:
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionInfo" }
+  /auth/register:
+    post:
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Registration" }
+      responses:
+        "201":
+          description: Account created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SessionInfo" }
+  /auth/logout:
+    post:
+      operationId: logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+  /profile:
+    get:
+      operationId: getProfile
+      responses:
+        "200":
+          description: Signed-in customer's own profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerProfile" }
+    patch:
+      operationId: updateProfile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProfileInput" }
+      responses:
+        "200":
+          description: Updated runtime customer contact profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CustomerProfile" }
+  /dashboard:
+    get:
+      operationId: getDashboard
+      responses:
+        "200":
+          description: Database-derived overview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Dashboard" }
+  /orders:
+    get:
+      operationId: getOrders
+      parameters:
+        - { name: search, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Team sees all orders; customer sees own orders only
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Order" } }
+    post:
+      operationId: createTestOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TestOrderInput" }
+      responses:
+        "201":
+          description: Clearly labelled new demo order, with COD workflow
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+  /orders/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getOrder
+      responses:
+        "200":
+          description: Order details with source warnings, related records and audit history
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+  /orders/{id}/cod:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: respondCod
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CodResponse" }
+      responses:
+        "200":
+          description: Workflow response, may include pending simulated payment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+  /orders/{id}/courier:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: triggerCourier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CourierInput" }
+      responses:
+        "200":
+          description: Event recorded and workflow started
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Result" }
+  /conversations:
+    get:
+      operationId: getConversations
+      responses:
+        "200":
+          description: Scoped inbox
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Conversation" } }
+    post:
+      operationId: createConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationInput" }
+      responses:
+        "201":
+          description: Conversation created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+  /conversations/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      operationId: getConversation
+      responses:
+        "200":
+          description: Conversation messages and redacted tool trace
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+    patch:
+      operationId: updateConversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ConversationUpdate" }
+      responses:
+        "200":
+          description: Takeover, handback or resolution
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+  /conversations/{id}/messages:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: sendMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MessageInput" }
+      responses:
+        "200":
+          description: Persisted conversation after agent or human response
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
+  /tickets:
+    get:
+      operationId: getTickets
+      responses:
+        "200":
+          description: Support tickets
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Ticket" } }
+  /tickets/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    patch:
+      operationId: updateTicket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TicketUpdate" }
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Ticket" }
+  /products:
+    get:
+      operationId: getProducts
+      responses:
+        "200":
+          description: Complete seed catalogue and inventory
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Product" } }
+  /customers:
+    get:
+      operationId: getCustomers
+      responses:
+        "200":
+          description: Team-only customer selector, masked contact
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Customer" } }
+  /analytics:
+    get:
+      operationId: getAnalytics
+      responses:
+        "200":
+          description: Real metrics; unobserved values are null
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Analytics" }
+  /activity:
+    get:
+      operationId: getActivity
+      responses:
+        "200":
+          description: Audit and redacted tool activity
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+  /settings:
+    get:
+      operationId: getSettings
+      responses:
+        "200":
+          description: Persisted timing/risk settings, policy and demo clock
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+    patch:
+      operationId: updateSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SettingsInput" }
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Settings" }
+  /dataset:
+    get:
+      operationId: getDataset
+      responses:
+        "200":
+          description: Exact source counts, import integrity and all warnings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DatasetReport" }
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
-
+        status: { type: string }
+    JsonRecord:
+      type: object
+      additionalProperties: true
+    Result:
+      type: object
+      required: [success, message]
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        paymentId: { type: string }
+    SessionInfo:
+      type: object
+      required: [authenticated, demoMode]
+      properties:
+        authenticated: { type: boolean }
+        demoMode: { type: boolean }
+        user: { $ref: "#/components/schemas/User" }
+    User:
+      type: object
+      required: [id, username, email, role]
+      properties:
+        id: { type: string }
+        username: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [CUSTOMER, TEAM] }
+        customerId: { type: [string, "null"] }
+    DemoAccess:
+      type: object
+      required: [role]
+      properties:
+        role: { type: string, enum: [CUSTOMER, TEAM] }
+        customerId: { type: string, description: "Demo-only fictional identity; defaults CUST-1006" }
+    Credentials:
+      type: object
+      required: [email, password, role]
+      properties:
+        email: { type: string }
+        password: { type: string }
+        role: { type: string, enum: [CUSTOMER, TEAM] }
+    Registration:
+      type: object
+      required: [username, email, password, role]
+      properties:
+        username: { type: string }
+        email: { type: string }
+        password: { type: string }
+        role: { type: string, enum: [CUSTOMER, TEAM] }
+    Customer:
+      type: object
+      required: [id, name, phone, email]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        phone: { type: string }
+        email: { type: string }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+    CustomerProfile:
+      type: object
+      required: [id, name, email, phone, address, editable]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+        editable: { type: boolean }
+    ProfileInput:
+      type: object
+      required: [phone, address]
+      properties:
+        phone: { type: string, minLength: 10 }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+    Product:
+      type: object
+      required: [sku, name, category, price, sizes, returnable, exchangeable, notes, inventory]
+      properties:
+        sku: { type: string }
+        name: { type: string }
+        category: { type: string }
+        price: { type: number }
+        sizes: { type: array, items: { type: string } }
+        returnable: { type: boolean }
+        exchangeable: { type: boolean }
+        notes: { type: string }
+        inventory: { type: array, items: { $ref: "#/components/schemas/Stock" } }
+    Stock:
+      type: object
+      required: [size, available]
+      properties:
+        size: { type: string }
+        available: { type: integer }
+    Order:
+      type: object
+      required: [id, customerId, customerName, status, fulfillmentStatus, paymentMethod, total, createdAt, items, shippingAddress, isDemo]
+      properties:
+        id: { type: string }
+        customerId: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        status: { type: string }
+        fulfillmentStatus: { type: string }
+        paymentMethod: { type: string }
+        paymentStatus: { type: string }
+        total: { type: number }
+        createdAt: { type: string }
+        deliveredAt: { type: [string, "null"] }
+        scenarioTag: { type: string }
+        isDemo: { type: boolean }
+        items: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        shippingAddress: { $ref: "#/components/schemas/JsonRecord" }
+        payment: { $ref: "#/components/schemas/JsonRecord" }
+        shipments: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        returns: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        refunds: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        cod: { $ref: "#/components/schemas/JsonRecord" }
+        risk: { $ref: "#/components/schemas/JsonRecord" }
+        warnings: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        audit: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        notes: { type: array, items: { type: string } }
+    TestOrderInput:
+      type: object
+      required: [customerId, sku, size, quantity, paymentMethod]
+      properties:
+        customerId: { type: string }
+        sku: { type: string }
+        size: { type: string }
+        quantity: { type: integer, minimum: 1, maximum: 10 }
+        paymentMethod: { type: string, enum: [COD, PREPAID] }
+    CodResponse:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [START, CONFIRM, CANCEL, EDIT_ADDRESS, PAY_ONLINE, PAYMENT_SUCCESS] }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+        paymentId: { type: string }
+    CourierInput:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERY_FAILED, DELIVERED, RTO_INITIATED] }
+        reason: { type: string }
+        eventId: { type: string }
+    ConversationInput:
+      type: object
+      properties:
+        customerId: { type: string }
+    ConversationUpdate:
+      type: object
+      required: [action]
+      properties:
+        action: { type: string, enum: [TAKE_OVER, HAND_BACK, RESOLVE] }
+    MessageInput:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string, minLength: 1, maxLength: 4000 }
+        asHuman: { type: boolean }
+    Message:
+      type: object
+      required: [id, role, content, createdAt]
+      properties:
+        id: { type: string }
+        role: { type: string }
+        content: { type: string }
+        createdAt: { type: string }
+    Conversation:
+      type: object
+      required: [id, customerId, customerName, status, language, updatedAt, messages]
+      properties:
+        id: { type: string }
+        customerId: { type: string }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        status: { type: string }
+        language: { type: string }
+        orderId: { type: [string, "null"] }
+        verified: { type: boolean }
+        updatedAt: { type: string }
+        lastMessage: { type: string }
+        handoverReason: { type: [string, "null"] }
+        messages: { type: array, items: { $ref: "#/components/schemas/Message" } }
+        tools: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        pendingAction: { $ref: "#/components/schemas/JsonRecord" }
+        ticket: { $ref: "#/components/schemas/Ticket" }
+    Ticket:
+      type: object
+      required: [id, conversationId, customerName, reason, sentiment, priority, status, summary, suggestedReply, createdAt]
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        customerName: { type: string }
+        orderId: { type: [string, "null"] }
+        reason: { type: string }
+        sentiment: { type: string }
+        priority: { type: string }
+        status: { type: string }
+        summary: { type: string }
+        suggestedReply: { type: string }
+        createdAt: { type: string }
+    TicketUpdate:
+      type: object
+      properties:
+        status: { type: string, enum: [OPEN, RESOLVED] }
+        suggestedReply: { type: string }
+    Dashboard:
+      type: object
+      required: [metrics, orderStatuses, riskBands, recentOrders, activity, demoClock]
+      properties:
+        metrics: { $ref: "#/components/schemas/JsonRecord" }
+        orderStatuses: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
+        riskBands: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
+        recentOrders: { type: array, items: { $ref: "#/components/schemas/Order" } }
+        activity: { type: array, items: { $ref: "#/components/schemas/Activity" } }
+        demoClock: { type: string }
+    Breakdown:
+      type: object
+      required: [name, count]
+      properties:
+        name: { type: string }
+        count: { type: integer }
+    Analytics:
+      type: object
+      required: [metrics, handovers, intents, orderStatuses]
+      properties:
+        metrics: { $ref: "#/components/schemas/JsonRecord" }
+        handovers: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
+        intents: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
+        orderStatuses: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
+    Activity:
+      type: object
+      required: [id, type, action, createdAt]
+      properties:
+        id: { type: string }
+        type: { type: string }
+        action: { type: string }
+        orderId: { type: [string, "null"] }
+        conversationId: { type: [string, "null"] }
+        createdAt: { type: string }
+        detail: { $ref: "#/components/schemas/JsonRecord" }
+    Settings:
+      type: object
+      required: [codReminderSeconds, codHoldSeconds, ndrFollowupSeconds, riskHighThreshold, riskMediumThreshold, demoMode, demoClock, policy]
+      properties:
+        codReminderSeconds: { type: integer }
+        codHoldSeconds: { type: integer }
+        ndrFollowupSeconds: { type: integer }
+        riskHighThreshold: { type: integer }
+        riskMediumThreshold: { type: integer }
+        demoMode: { type: boolean }
+        demoClock: { type: string }
+        policy: { $ref: "#/components/schemas/JsonRecord" }
+    SettingsInput:
+      type: object
+      required: [codReminderSeconds, codHoldSeconds, ndrFollowupSeconds, riskHighThreshold, riskMediumThreshold]
+      properties:
+        codReminderSeconds: { type: integer, minimum: 2, maximum: 86400 }
+        codHoldSeconds: { type: integer, minimum: 3, maximum: 604800 }
+        ndrFollowupSeconds: { type: integer, minimum: 2, maximum: 86400 }
+        riskHighThreshold: { type: integer, minimum: 1, maximum: 100 }
+        riskMediumThreshold: { type: integer, minimum: 0, maximum: 99 }
+    DatasetReport:
+      type: object
+      required: [name, hash, counts, warnings, scenarios, importedAt]
+      properties:
+        name: { type: string }
+        hash: { type: string }
+        importedAt: { type: string }
+        counts: { $ref: "#/components/schemas/JsonRecord" }
+        warnings: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        scenarios: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }

@@ -1,0 +1,386 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model SeedDataset {
+  id           String @id
+  hash         String @unique
+  name         String
+  originalText String @db.Text
+  metadata     Json
+  notes        Json
+  policy       Json
+  scenarios    Json
+  importedAt   DateTime @default(now())
+}
+model PolicyVersion {
+  id            String @id
+  seedDatasetId String
+  version       String
+  document      Json
+}
+model DemoScenario {
+  id          String @id
+  sourceIndex Int @unique
+  scenario    String
+  expected    String
+  orderId     String?
+  sourceRecord Json
+  order       Order? @relation(fields:[orderId], references:[id])
+}
+model Customer {
+  id                       String @id
+  name                     String
+  email                    String
+  phone                    String
+  address                  Json
+  isFirstTimeCustomer      Boolean
+  codRefusalsLast12Months   Int
+  returnsLast60Days         Int
+  customerSince            String
+  sourceRecord             Json
+  orders                   Order[]
+  histories                CustomerReturnHistory[]
+  users                    User[]
+  conversations            Conversation[]
+  returnRecords            ReturnRecord[]
+  refunds                  Refund[]
+  confirmations            CODConfirmation[]
+}
+model CustomerReturnHistory {
+  id             String @id
+  customerId     String
+  customer       Customer @relation(fields:[customerId], references:[id])
+  sourceOrderId  String
+  linkedOrderId  String?
+  status         String
+  daysAgo        Int
+  sourceRecord   Json
+}
+model Product {
+  sku          String @id
+  name         String
+  category     String
+  price        Decimal @db.Decimal(12,2)
+  sizes        String[]
+  returnable   Boolean
+  exchangeable Boolean
+  notes        String
+  sourceRecord Json
+  inventory    Inventory[]
+  items        OrderItem[]
+}
+model Inventory {
+  sku       String
+  size      String
+  available Int
+  product   Product @relation(fields:[sku], references:[sku])
+  @@id([sku,size])
+}
+model Order {
+  id                           String @id
+  isEvaluation                 Boolean @default(false)
+  customerId                   String
+  customer                     Customer @relation(fields:[customerId], references:[id])
+  scenarioTag                  String
+  createdAt                    DateTime
+  currency                     String @default("INR")
+  status                       String
+  fulfillmentStatus            String
+  shippingAddress              Json
+  verificationPhone            String
+  deliveredAt                  DateTime?
+  customerVerificationRequired Boolean @default(true)
+  notes                        String[]
+  sourceRecord                 Json
+  isDemo                       Boolean @default(false)
+  payment                      OrderPayment?
+  items                        OrderItem[]
+  shipments                    Shipment[]
+  returns                      ReturnRecord[]
+  refunds                      Refund[]
+  cod                          CODConfirmation?
+  requests                     ReturnRequest[]
+  scenarios                    DemoScenario[]
+  @@index([customerId])
+}
+model OrderPayment {
+  orderId             String @id
+  order               Order @relation(fields:[orderId], references:[id])
+  method              String
+  status              String
+  subtotal            Decimal @db.Decimal(12,2)
+  shippingFee         Decimal @db.Decimal(12,2)
+  codFee              Decimal @db.Decimal(12,2)
+  discount            Decimal @db.Decimal(12,2)
+  total               Decimal @db.Decimal(12,2)
+  amountDueAtDelivery Decimal @db.Decimal(12,2)
+}
+model OrderItem {
+  id          String @id
+  orderId     String
+  order       Order @relation(fields:[orderId], references:[id])
+  sourceIndex Int
+  sku         String
+  product     Product @relation(fields:[sku], references:[sku])
+  productName String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(12,2)
+  size        String
+  isSaleItem  Boolean
+  isInnerwear Boolean
+  requests    ReturnRequest[]
+  @@unique([orderId,sourceIndex])
+}
+model Shipment {
+  id                    String @id
+  orderId               String
+  order                 Order @relation(fields:[orderId], references:[id])
+  carrier               String
+  trackingNumber        String
+  trackingUrl           String
+  status                String
+  attemptCount          Int
+  estimatedDeliveryDate String?
+  lastFailureReason     String?
+  sourceRecord          Json
+  events                ShipmentEvent[]
+}
+model ShipmentEvent {
+  id          String @id
+  shipmentId  String
+  shipment    Shipment @relation(fields:[shipmentId], references:[id])
+  status      String
+  reason      String?
+  occurredAt  DateTime
+  source      String
+  sourceIndex Int
+}
+model ReturnRecord {
+  id                   String @id
+  orderId              String
+  order                Order @relation(fields:[orderId], references:[id])
+  customerId           String
+  customer             Customer @relation(fields:[customerId], references:[id])
+  status               String
+  deliveredDaysAgo     Int
+  eligibleByWindow     Boolean
+  reason               String?
+  qualityCheckStatus   String
+  exchangeCountForItem Int
+  sourceRecord         Json
+}
+model Refund {
+  id                 String @id
+  orderId            String
+  order              Order @relation(fields:[orderId], references:[id])
+  customerId         String
+  customer           Customer @relation(fields:[customerId], references:[id])
+  amount             Decimal @db.Decimal(12,2)
+  status             String
+  method             String
+  requestedAt        DateTime
+  qualityCheckStatus String
+  policyNote         String
+  sourceRecord       Json
+}
+model CODConfirmation {
+  orderId                 String @id
+  order                   Order @relation(fields:[orderId], references:[id])
+  customerId              String
+  customer                Customer @relation(fields:[customerId], references:[id])
+  riskScore               Int
+  riskBand                String
+  riskReasons             String[]
+  status                  String
+  messageSentAt           DateTime?
+  reminderDueAfterMinutes Int
+  holdAfterMinutes        Int
+  options                 String[]
+  prepaidDiscountPercent  Int
+  reminderSentAt          DateTime?
+  heldAt                  DateTime?
+  sourceRecord            Json
+}
+model PincodeServiceability {
+  pincode      String @id
+  city         String
+  codAvailable Boolean
+}
+model DataQualityIssue {
+  id       String @id
+  entityId String
+  code     String
+  detail   String
+  @@index([entityId])
+}
+model User {
+  id           String @id @default(cuid())
+  username     String @unique
+  email        String @unique
+  passwordHash String
+  role         String
+  customerId   String?
+  customer     Customer? @relation(fields:[customerId], references:[id])
+  sessions     Session[]
+}
+model Session {
+  tokenHash String @id
+  userId    String
+  user      User @relation(fields:[userId], references:[id])
+  expiresAt DateTime
+}
+model Conversation {
+  id             String @id @default(cuid())
+  isEvaluation   Boolean @default(false)
+  customerId     String
+  customer       Customer @relation(fields:[customerId], references:[id])
+  status         String @default("AI_HANDLING")
+  language       String @default("English")
+  orderId        String?
+  verifiedAt     DateTime?
+  verifiedPhone  String?
+  version        Int @default(0)
+  busyUntil      DateTime?
+  handoverReason String?
+  intent         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  messages       Message[]
+  tools          AgentToolExecution[]
+  ticket         SupportTicket?
+  pendingActions PendingAction[]
+}
+model Message {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields:[conversationId], references:[id])
+  role           String
+  content        String @db.Text
+  dedupeKey      String? @unique
+  createdAt      DateTime @default(now())
+}
+model SupportTicket {
+  id             String @id @default(cuid())
+  conversationId String @unique
+  conversation   Conversation @relation(fields:[conversationId], references:[id])
+  orderId        String?
+  reason         String
+  sentiment      String
+  priority       String
+  status         String @default("OPEN")
+  summary        String @db.Text
+  suggestedReply String @db.Text
+  createdAt      DateTime @default(now())
+}
+model PendingAction {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields:[conversationId], references:[id])
+  orderId        String
+  action         String
+  payload        Json
+  status         String @default("PENDING")
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+}
+model ReturnRequest {
+  id          String @id @default(cuid())
+  orderId     String
+  order       Order @relation(fields:[orderId], references:[id])
+  orderItemId String
+  orderItem   OrderItem @relation(fields:[orderItemId], references:[id])
+  kind        String
+  size        String?
+  quantity    Int @default(1)
+  status      String @default("REQUESTED")
+  consentId   String @unique
+  evidence    Json
+  createdAt   DateTime @default(now())
+}
+model AgentToolExecution {
+  id             String @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields:[conversationId], references:[id])
+  toolName       String
+  input          Json
+  output         Json
+  status         String
+  durationMs     Int
+  createdAt      DateTime @default(now())
+}
+model AgentRun {
+  id             String @id @default(cuid())
+  isEvaluation   Boolean @default(false)
+  conversationId String
+  durationMs     Int
+  inputTokens    Int
+  outputTokens   Int
+  model          String
+  status         String
+  createdAt      DateTime @default(now())
+}
+model AuditLog {
+  id             String @id @default(cuid())
+  actor          String
+  action         String
+  orderId        String?
+  conversationId String?
+  oldValue       Json
+  newValue       Json
+  createdAt      DateTime @default(now())
+}
+model WebhookEvent {
+  id          String @id
+  provider    String
+  payloadHash String
+  createdAt   DateTime @default(now())
+}
+model RiskAssessment {
+  id         String @id @default(cuid())
+  orderId    String
+  score      Int
+  band       String
+  reasons    String[]
+  version    String
+  createdAt  DateTime @default(now())
+}
+model NDRCase {
+  id             String @id @default(cuid())
+  orderId        String
+  shipmentId     String
+  reason         String
+  attemptCount   Int
+  status         String @default("AWAITING_CUSTOMER")
+  conversationId String
+  response       Json?
+  eventId        String @unique
+  createdAt      DateTime @default(now())
+}
+model PaymentAttempt {
+  id        String @id @default(cuid())
+  orderId   String
+  amount    Decimal @db.Decimal(12,2)
+  discount  Decimal @db.Decimal(12,2)
+  status    String @default("PENDING")
+  createdAt DateTime @default(now())
+}
+model OutboxJob {
+  id          String @id
+  kind        String
+  payload     Json
+  dueAt       DateTime
+  state       String @default("PENDING")
+  attempts    Int @default(0)
+  lockedUntil DateTime?
+  lastError   String?
+  createdAt   DateTime @default(now())
+  @@index([state,dueAt])
+}
+model AppSetting {
+  key   String @id
+  value Json
+}
