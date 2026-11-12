@@ -2,9 +2,9 @@ import { useEffect, type ReactNode } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Activity, BarChart3, Banknote, Inbox, LayoutGrid, LifeBuoy, LogOut, Package, Settings, Truck, ShoppingBag, Receipt, UserRound,
+  Activity, BarChart3, Banknote, Inbox, LayoutGrid, LifeBuoy, LogOut, Package, Settings, Truck, ShoppingBag, Receipt, UserRound, ShoppingCart,
 } from 'lucide-react';
-import { useGetSession, getGetSessionQueryKey, useLogout, type SessionInfo } from '@workspace/api-client-react';
+import { useGetCart, useGetSession, getGetSessionQueryKey, useLogout, type SessionInfo } from '@workspace/api-client-react';
 import { cn } from '@/lib/utils';
 import { useLive } from '@/hooks/use-live';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -162,12 +162,13 @@ function StoreFrame({ session, children }: { session: SessionInfo; children: Rea
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 md:px-6">
           <Link href="/store" data-testid="link-store-home"><Wordmark /></Link>
-          <nav className="flex gap-1 text-sm">
+          <nav className="flex gap-1 overflow-x-auto text-sm">
             <Link href="/store" data-testid="link-catalogue" className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5', loc === '/store' || loc.startsWith('/store/product') ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')}><ShoppingBag className="h-4 w-4" />Shop</Link>
             <Link href="/store/orders" data-testid="link-my-orders" className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5', loc === '/store/orders' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')}><Receipt className="h-4 w-4" />My orders</Link>
             <Link href="/store/profile" data-testid="link-profile" className={cn('flex items-center gap-1.5 rounded-md px-3 py-1.5', loc === '/store/profile' ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground')}><UserRound className="h-4 w-4" />Profile</Link>
           </nav>
           <div className="ml-auto flex items-center gap-3">
+            <CartLink active={loc === '/store/cart' || loc === '/store/checkout'} />
             <div className="hidden text-right sm:block">
               <div data-testid="text-username" className="text-sm font-medium">{session.user?.username}</div>
               <div className="font-data text-[10px] text-muted-foreground">{session.user?.customerId ?? 'Customer'}</div>
@@ -178,5 +179,15 @@ function StoreFrame({ session, children }: { session: SessionInfo; children: Rea
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8 md:px-6">{children}</main>
     </div>
+  );
+}
+
+function CartLink({ active }: { active: boolean }) {
+  const { data } = useGetCart();
+  return (
+    <Link href="/store/cart" data-testid="link-cart" className={cn('relative flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm', active ? 'border-indigo bg-indigo text-paper' : 'bg-card hover:border-indigo')}>
+      <ShoppingCart className="h-4 w-4" /><span className="hidden sm:inline">Bag</span>
+      {!!data?.count && <span data-testid="text-cart-count" className="grid h-5 min-w-5 place-items-center rounded-full bg-turmeric px-1 font-data text-[10px] text-indigo">{data.count}</span>}
+    </Link>
   );
 }

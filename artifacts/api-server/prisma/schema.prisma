@@ -49,6 +49,35 @@ model Customer {
   returnRecords            ReturnRecord[]
   refunds                  Refund[]
   confirmations            CODConfirmation[]
+  cart                     Cart?
+  checkoutSubmissions      CheckoutSubmission[]
+}
+model Cart {
+  customerId String @id
+  customer   Customer @relation(fields:[customerId], references:[id])
+  version    Int @default(0)
+  items      CartItem[]
+  updatedAt  DateTime @updatedAt
+}
+model CartItem {
+  customerId String
+  sku        String
+  size       String
+  quantity   Int
+  cart       Cart @relation(fields:[customerId], references:[customerId])
+  product    Product @relation(fields:[sku], references:[sku])
+  @@id([customerId,sku,size])
+}
+model CheckoutSubmission {
+  id           String @id @default(cuid())
+  customerId   String
+  customer     Customer @relation(fields:[customerId], references:[id])
+  key          String
+  payloadHash  String
+  orderId      String @unique
+  order        Order @relation(fields:[orderId], references:[id])
+  createdAt    DateTime @default(now())
+  @@unique([customerId,key])
 }
 model CustomerReturnHistory {
   id             String @id
@@ -72,6 +101,7 @@ model Product {
   sourceRecord Json
   inventory    Inventory[]
   items        OrderItem[]
+  cartItems    CartItem[]
 }
 model Inventory {
   sku       String
@@ -97,6 +127,9 @@ model Order {
   notes                        String[]
   sourceRecord                 Json
   isDemo                       Boolean @default(false)
+  origin                       String @default("SEED")
+  inventoryReserved            Boolean @default(false)
+  checkoutSubmission           CheckoutSubmission?
   payment                      OrderPayment?
   items                        OrderItem[]
   shipments                    Shipment[]
@@ -366,6 +399,7 @@ model PaymentAttempt {
   amount    Decimal @db.Decimal(12,2)
   discount  Decimal @db.Decimal(12,2)
   status    String @default("PENDING")
+  purpose   String @default("COD_CONVERSION")
   createdAt DateTime @default(now())
 }
 model OutboxJob {

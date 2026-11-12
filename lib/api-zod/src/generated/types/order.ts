@@ -25,6 +25,8 @@ export interface Order {
   items: JsonRecord[];
   shippingAddress: JsonRecord;
   payment?: JsonRecord;
+  paymentAttempts?: JsonRecord[];
+  origin?: string;
   shipments?: JsonRecord[];
   returns?: JsonRecord[];
   refunds?: JsonRecord[];

@@ -22,6 +22,8 @@ import Catalogue from '@/pages/store/catalogue';
 import ProductPage from '@/pages/store/product';
 import MyOrders from '@/pages/store/orders';
 import ProfilePage from '@/pages/store/profile';
+import CartPage from '@/pages/store/cart';
+import CheckoutPage from '@/pages/store/checkout';
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { refetchOnWindowFocus: false, retry: 1 } } });
 
@@ -50,6 +52,8 @@ function Router() {
         <Route path="/ops/settings" component={ops(SettingsPage)} />
         <Route path="/store" component={store(Catalogue)} />
         <Route path="/store/product/:sku" component={store(ProductPage)} />
+        <Route path="/store/cart" component={store(CartPage)} />
+        <Route path="/store/checkout" component={store(CheckoutPage)} />
         <Route path="/store/orders" component={store(MyOrders)} />
         <Route path="/store/profile" component={store(ProfilePage)} />
         <Route component={NotFound} />

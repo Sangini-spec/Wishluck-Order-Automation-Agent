@@ -146,6 +146,8 @@ export const GetDashboardResponse = zod.object({
   "items": zod.array(zod.record(zod.string(), zod.unknown())),
   "shippingAddress": zod.record(zod.string(), zod.unknown()),
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -165,6 +167,128 @@ export const GetDashboardResponse = zod.object({
   "detail": zod.record(zod.string(), zod.unknown()).optional()
 })),
   "demoClock": zod.string()
+})
+
+
+export const GetCartResponse = zod.object({
+  "version": zod.number().int(),
+  "items": zod.array(zod.object({
+  "sku": zod.string(),
+  "name": zod.string(),
+  "size": zod.string(),
+  "quantity": zod.number().int(),
+  "unitPrice": zod.number(),
+  "available": zod.number().int(),
+  "lineTotal": zod.number()
+})),
+  "subtotal": zod.number(),
+  "count": zod.number().int()
+})
+
+
+export const changeCartBodyQuantityMin = 0;
+export const changeCartBodyQuantityMax = 10;
+
+
+
+export const ChangeCartBody = zod.object({
+  "sku": zod.string(),
+  "size": zod.string(),
+  "quantity": zod.number().int().min(changeCartBodyQuantityMin).max(changeCartBodyQuantityMax),
+  "mode": zod.enum(['ADD', 'SET'])
+})
+
+export const ChangeCartResponse = zod.object({
+  "version": zod.number().int(),
+  "items": zod.array(zod.object({
+  "sku": zod.string(),
+  "name": zod.string(),
+  "size": zod.string(),
+  "quantity": zod.number().int(),
+  "unitPrice": zod.number(),
+  "available": zod.number().int(),
+  "lineTotal": zod.number()
+})),
+  "subtotal": zod.number(),
+  "count": zod.number().int()
+})
+
+
+export const getCheckoutQuoteBodyPhoneMin = 10;
+
+
+
+export const GetCheckoutQuoteBody = zod.object({
+  "paymentMethod": zod.enum(['COD', 'PREPAID']),
+  "phone": zod.string().min(getCheckoutQuoteBodyPhoneMin),
+  "address": zod.record(zod.string(), zod.unknown())
+})
+
+export const GetCheckoutQuoteResponse = zod.object({
+  "subtotal": zod.number(),
+  "shippingFee": zod.number(),
+  "codFee": zod.number(),
+  "total": zod.number(),
+  "eligible": zod.boolean(),
+  "reason": zod.string(),
+  "cartVersion": zod.number().int(),
+  "items": zod.array(zod.object({
+  "sku": zod.string(),
+  "name": zod.string(),
+  "size": zod.string(),
+  "quantity": zod.number().int(),
+  "unitPrice": zod.number(),
+  "available": zod.number().int(),
+  "lineTotal": zod.number()
+})),
+  "demoPayment": zod.boolean()
+})
+
+
+export const submitCheckoutBodyPhoneMin = 10;
+
+
+export const submitCheckoutBodyIdempotencyKeyMin = 12;
+export const submitCheckoutBodyIdempotencyKeyMax = 100;
+
+
+
+export const SubmitCheckoutBody = zod.object({
+  "paymentMethod": zod.enum(['COD', 'PREPAID']),
+  "phone": zod.string().min(submitCheckoutBodyPhoneMin),
+  "address": zod.record(zod.string(), zod.unknown()),
+  "cartVersion": zod.number().int().min(1),
+  "idempotencyKey": zod.string().min(submitCheckoutBodyIdempotencyKeyMin).max(submitCheckoutBodyIdempotencyKeyMax),
+  "saveProfile": zod.boolean().optional()
+})
+
+export const SubmitCheckoutResponse = zod.object({
+  "id": zod.string(),
+  "customerId": zod.string(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string().optional(),
+  "status": zod.string(),
+  "fulfillmentStatus": zod.string(),
+  "paymentMethod": zod.string(),
+  "paymentStatus": zod.string().optional(),
+  "total": zod.number(),
+  "createdAt": zod.string(),
+  "deliveredAt": zod.string().nullish(),
+  "scenarioTag": zod.string().optional(),
+  "isDemo": zod.boolean(),
+  "items": zod.array(zod.record(zod.string(), zod.unknown())),
+  "shippingAddress": zod.record(zod.string(), zod.unknown()),
+  "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
+  "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "cod": zod.record(zod.string(), zod.unknown()).optional(),
+  "risk": zod.record(zod.string(), zod.unknown()).optional(),
+  "warnings": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "audit": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "notes": zod.array(zod.string()).optional()
 })
 
 
@@ -190,6 +314,8 @@ export const GetOrdersResponseItem = zod.object({
   "items": zod.array(zod.record(zod.string(), zod.unknown())),
   "shippingAddress": zod.record(zod.string(), zod.unknown()),
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -231,6 +357,8 @@ export const CreateTestOrderResponse = zod.object({
   "items": zod.array(zod.record(zod.string(), zod.unknown())),
   "shippingAddress": zod.record(zod.string(), zod.unknown()),
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -263,6 +391,8 @@ export const GetOrderResponse = zod.object({
   "items": zod.array(zod.record(zod.string(), zod.unknown())),
   "shippingAddress": zod.record(zod.string(), zod.unknown()),
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -288,6 +418,45 @@ export const RespondCodResponse = zod.object({
   "success": zod.boolean(),
   "message": zod.string(),
   "paymentId": zod.string().optional()
+})
+
+
+export const SimulateCustomerPaymentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const SimulateCustomerPaymentBody = zod.object({
+  "paymentId": zod.string(),
+  "action": zod.enum(['SUCCEED', 'FAIL'])
+})
+
+export const SimulateCustomerPaymentResponse = zod.object({
+  "id": zod.string(),
+  "customerId": zod.string(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string().optional(),
+  "status": zod.string(),
+  "fulfillmentStatus": zod.string(),
+  "paymentMethod": zod.string(),
+  "paymentStatus": zod.string().optional(),
+  "total": zod.number(),
+  "createdAt": zod.string(),
+  "deliveredAt": zod.string().nullish(),
+  "scenarioTag": zod.string().optional(),
+  "isDemo": zod.boolean(),
+  "items": zod.array(zod.record(zod.string(), zod.unknown())),
+  "shippingAddress": zod.record(zod.string(), zod.unknown()),
+  "payment": zod.record(zod.string(), zod.unknown()).optional(),
+  "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "origin": zod.string().optional(),
+  "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "cod": zod.record(zod.string(), zod.unknown()).optional(),
+  "risk": zod.record(zod.string(), zod.unknown()).optional(),
+  "warnings": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "audit": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "notes": zod.array(zod.string()).optional()
 })
 
 

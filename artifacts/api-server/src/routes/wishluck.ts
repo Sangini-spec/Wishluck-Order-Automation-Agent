@@ -10,6 +10,8 @@ import { orderInclude,orderView,settings,audit,createTestOrder,createConversatio
 import { dashboard,analytics,activity,datasetReport } from "../lib/analytics";
 import { respondAgent } from "../lib/agent";
 import { logger } from "../lib/logger";
+import { getCart,changeCart,checkoutQuote } from "../lib/cart";
+import { submitCheckout,simulateCustomerPayment } from "../lib/checkout";
 const router=Router();router.use(cookieParser());router.use(sessionMiddleware);
 const authLimit=rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false,validate:{xForwardedForHeader:false},message:{error:"Too many attempts. Try again shortly."}});
 router.get("/auth/me",(req:AuthRequest,res)=>res.json(sessionInfo(req.user)));
@@ -43,6 +45,35 @@ function signature(req:any){
 router.post("/webhooks/courier",async(req,res)=>{signature(req);const body=z.object({orderId:z.string(),eventId:z.string().min(1)}).passthrough().parse(req.body);res.json(await courierEvent(body.orderId,{...V.TriggerCourierBody.parse(body),eventId:body.eventId}));});
 router.post("/webhooks/orders",async(req,res)=>{signature(req);const a=z.object({eventId:z.string().min(1),order:z.unknown()}).parse(req.body);const input=V.CreateTestOrderBody.parse(a.order);res.status(201).json(await createTestOrder(input,a.eventId));});
 router.use(requireUser);
+function customerId(req:AuthRequest){
+  if(req.user!.role!=="CUSTOMER"||!req.user!.customerId)throw new HttpError(403,"Customer account required.");
+  return req.user!.customerId;
+}
+const delivery=z.object({
+  phone:z.string().trim().regex(/^(?:\+91[- ]?)?\d{10}$/),
+  paymentMethod:z.enum(["COD","PREPAID"]),
+  address:z.object({
+    line1:z.string().trim().min(3).max(200),line2:z.string().trim().max(200).optional(),
+    landmark:z.string().trim().max(150).optional(),city:z.string().trim().min(2).max(80),
+    state:z.string().trim().min(2).max(80),pincode:z.string().regex(/^\d{6}$/),
+  }).strict(),
+}).strict();
+router.get("/cart",async(req:AuthRequest,res)=>res.json(await getCart(customerId(req))));
+router.patch("/cart",async(req:AuthRequest,res)=>{
+  const a=V.ChangeCartBody.parse(req.body);
+  res.json(await changeCart(customerId(req),z.object({sku:z.string().min(1).max(80),size:z.string().min(1).max(40),quantity:z.number().int().min(0).max(10),mode:z.enum(["ADD","SET"])}).strict().parse(a)));
+  refresh();
+});
+router.post("/checkout/quote",async(req:AuthRequest,res)=>{
+  const a=delivery.parse(V.GetCheckoutQuoteBody.parse(req.body));
+  res.json(await checkoutQuote(customerId(req),a));
+});
+router.post("/checkout",async(req:AuthRequest,res)=>{
+  const body=V.SubmitCheckoutBody.parse(req.body);
+  const a=z.object({phone:delivery.shape.phone,paymentMethod:delivery.shape.paymentMethod,address:delivery.shape.address,
+    cartVersion:z.number().int().min(1),idempotencyKey:z.string().min(12).max(100),saveProfile:z.boolean().optional()}).strict().parse(body);
+  res.status(201).json(await submitCheckout(customerId(req),a));
+});
 async function ownProfile(req:AuthRequest){
   if(req.user!.role!=="CUSTOMER"||!req.user!.customerId)throw new HttpError(403,"Customer account required.");
   const c=await prisma.customer.findUniqueOrThrow({where:{id:req.user!.customerId}});
@@ -86,8 +117,13 @@ router.post("/orders",requireTeam,async(req,res)=>res.status(201).json(await cre
 router.post("/orders/:id/cod",async(req:AuthRequest,res)=>{
   const id=V.RespondCodParams.parse(req.params).id;await ownOrder(req,id);
   const action=V.RespondCodBody.parse(req.body);
+  if(action.action==="START"&&req.user!.role!=="TEAM")throw new HttpError(403,"New customer COD orders start automatically; only the team can restart imported demo workflows.");
   if(action.action==="PAYMENT_SUCCESS"&&req.user!.role!=="TEAM")throw new HttpError(403,"Only the demo team can trigger the simulated payment callback.");
   res.json(await codRespond(id,action));
+});
+router.post("/orders/:id/payment",async(req:AuthRequest,res)=>{
+  const id=V.SimulateCustomerPaymentParams.parse(req.params).id,a=V.SimulateCustomerPaymentBody.parse(req.body);
+  res.json(await simulateCustomerPayment(customerId(req),id,a.paymentId,a.action));
 });
 router.post("/orders/:id/courier",requireTeam,async(req:AuthRequest,res)=>{
   const id=V.TriggerCourierParams.parse(req.params).id;await ownOrder(req,id);res.json(await courierEvent(id,V.TriggerCourierBody.parse(req.body)));

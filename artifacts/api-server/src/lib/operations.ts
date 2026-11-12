@@ -17,13 +17,14 @@ export async function riskFor(o:any){
   const pin=await prisma.pincodeServiceability.findUnique({where:{pincode:String(a.pincode)}});
   const since=new Date(o.createdAt.getTime()-86400000);
   const recent=await prisma.order.count({where:{customerId:o.customerId,isEvaluation:o.isEvaluation,createdAt:{gte:since,lte:o.createdAt},payment:{method:"COD"}}});
-  const risk=scoreRisk({total:Number(o.payment.total),first:o.customer.isFirstTimeCustomer,refusals:o.customer.codRefusalsLast12Months,weakAddress:!/\d/.test(a.line1||"")||/near.*(?:temple|mandir)/i.test(a.line1||""),codAvailable:!!pin?.codAvailable,recentOrders:recent},cfg.riskMediumThreshold,cfg.riskHighThreshold);
+  const risk=scoreRisk({total:Number(o.payment.total),first:(o.sourceRecord as any)?.firstTimeAtPlacement??o.customer.isFirstTimeCustomer,refusals:o.customer.codRefusalsLast12Months,weakAddress:!/\d/.test(a.line1||"")||/near.*(?:temple|mandir)/i.test(a.line1||""),codAvailable:!!pin?.codAvailable,recentOrders:recent},cfg.riskMediumThreshold,cfg.riskHighThreshold);
   const eligibility=codEligibility(Number(o.payment.total),!!pin?.codAvailable);
   return {...risk,eligible:eligibility.eligible,eligibilityReason:eligibility.reason};
 }
 export async function orderView(o:any,detail=false){
   const risk=o.payment?.method==="COD"?await riskFor(o):undefined;
-  const v={id:o.id,customerId:o.customerId,customerName:o.customer.name,customerPhone:maskPhone(o.verificationPhone),status:o.status,fulfillmentStatus:o.fulfillmentStatus,paymentMethod:o.payment?.method||"",paymentStatus:o.payment?.status||"",total:Number(o.payment?.total||0),createdAt:o.createdAt.toISOString(),deliveredAt:o.deliveredAt?.toISOString()||null,scenarioTag:o.scenarioTag,isDemo:o.isDemo,items:o.items,shippingAddress:o.shippingAddress,payment:o.payment,shipments:o.shipments,returns:o.returns.map(({sourceRecord,...x}:any)=>x),refunds:o.refunds.map(({sourceRecord,...x}:any)=>x),...(o.cod?{cod:((({sourceRecord,...c}:any)=>c)(o.cod))}:{}),...(risk?{risk}:{}),notes:o.notes,
+  const attempts=await prisma.paymentAttempt.findMany({where:{orderId:o.id},orderBy:{createdAt:"desc"},select:{id:true,amount:true,discount:true,status:true,purpose:true,createdAt:true}});
+  const v={id:o.id,customerId:o.customerId,customerName:o.customer.name,customerPhone:maskPhone(o.verificationPhone),status:o.status,fulfillmentStatus:o.fulfillmentStatus,paymentMethod:o.payment?.method||"",paymentStatus:o.payment?.status||"",total:Number(o.payment?.total||0),createdAt:o.createdAt.toISOString(),deliveredAt:o.deliveredAt?.toISOString()||null,scenarioTag:o.scenarioTag,isDemo:o.isDemo,origin:o.origin,paymentAttempts:attempts.map(x=>({...x,amount:Number(x.amount),discount:Number(x.discount)})),items:o.items,shippingAddress:o.shippingAddress,payment:o.payment,shipments:o.shipments,returns:o.returns.map(({sourceRecord,...x}:any)=>x),refunds:o.refunds.map(({sourceRecord,...x}:any)=>x),...(o.cod?{cod:((({sourceRecord,...c}:any)=>c)(o.cod))}:{}),...(risk?{risk}:{}),notes:o.notes,
     warnings:await prisma.dataQualityIssue.findMany({where:{entityId:{in:[o.id,o.customerId]}}}),
     ...(detail?{audit:await prisma.auditLog.findMany({where:{orderId:o.id},orderBy:{createdAt:"desc"},take:100})}:{})};
   v.shipments=v.shipments.map(({sourceRecord,...s}:any)=>s);
@@ -93,16 +94,35 @@ export async function codRespond(orderId:string,input:any){
     if(!o.cod.messageSentAt)throw new HttpError(409,"Start the workflow and wait for its confirmation message before accepting a response.");
     const r=await riskFor(o);
     if(!r.eligible&&["CONFIRM","EDIT_ADDRESS"].includes(input.action))throw new HttpError(409,r.eligibilityReason);
-    if(input.action==="CONFIRM"){await t.cODConfirmation.update({where:{orderId},data:{status:"CONFIRMED"}});await t.order.update({where:{id:orderId},data:{status:"READY_TO_SHIP"}});message="COD confirmed. This order is ready to ship.";}
-    else if(input.action==="CANCEL"){await t.cODConfirmation.update({where:{orderId},data:{status:"CANCELLED"}});await t.order.update({where:{id:orderId},data:{status:"CANCELLED"}});message="The unshipped COD order has been cancelled.";}
+    if(input.action==="CONFIRM"){
+      await t.paymentAttempt.updateMany({where:{orderId,status:"PENDING",purpose:"COD_CONVERSION"},data:{status:"CANCELLED"}});
+      await t.cODConfirmation.update({where:{orderId},data:{status:"CONFIRMED"}});await t.order.update({where:{id:orderId},data:{status:"READY_TO_SHIP"}});message="COD confirmed. This order is ready to ship.";
+    }
+    else if(input.action==="CANCEL"){
+      const {releaseReservedStock}=await import("./checkout");
+      await releaseReservedStock(t,orderId);
+      await t.paymentAttempt.updateMany({where:{orderId,status:"PENDING",purpose:"COD_CONVERSION"},data:{status:"CANCELLED"}});
+      await t.cODConfirmation.update({where:{orderId},data:{status:"CANCELLED"}});
+      await t.order.update({where:{id:orderId},data:{status:"CANCELLED"}});message="The unshipped COD order has been cancelled.";
+    }
     else if(input.action==="EDIT_ADDRESS"){
       const a=input.address;if(!a||!a.line1||!a.city||!a.pincode)throw new HttpError(400,"Provide address line1, city and pincode.");
       const pin=await t.pincodeServiceability.findUnique({where:{pincode:String(a.pincode)}});
       if(!pin?.codAvailable)throw new HttpError(400,"COD is unavailable or serviceability is unknown at the new pincode.");
-      await t.order.update({where:{id:orderId},data:{shippingAddress:json({...o.shippingAddress,...a})}});message="Address updated before dispatch. Please confirm the COD order separately.";
+      const changed=json({...o.shippingAddress,...a});
+      await t.order.update({where:{id:orderId},data:{shippingAddress:changed}});
+      const cfg:any=await settings(),recent=await t.order.count({where:{customerId:o.customerId,payment:{method:"COD"},isEvaluation:o.isEvaluation,createdAt:{gte:new Date(o.createdAt.getTime()-86400000),lte:o.createdAt}}});
+      const r2=scoreRisk({total:Number(o.payment.total),first:(o.sourceRecord as any)?.firstTimeAtPlacement??o.customer.isFirstTimeCustomer,
+        refusals:o.customer.codRefusalsLast12Months,weakAddress:!/\d/.test(changed.line1)||/near.*(?:temple|mandir)/i.test(changed.line1),
+        codAvailable:true,recentOrders:recent},cfg.riskMediumThreshold,cfg.riskHighThreshold);
+      await t.cODConfirmation.update({where:{orderId},data:{riskScore:r2.score,riskBand:r2.band,riskReasons:r2.reasons}});
+      await t.riskAssessment.create({data:{orderId,score:r2.score,band:r2.band,reasons:r2.reasons,version:"rules-1"}});
+      await audit(t,"CUSTOMER","Updated delivery address before COD dispatch",orderId,{shippingAddress:o.shippingAddress},{shippingAddress:changed});
+      message="Address updated before dispatch. Please confirm the COD order separately.";
     }else if(input.action==="PAY_ONLINE"){
       const quote=prepaidQuote(Number(o.payment.subtotal),Number(o.payment.shippingFee),Number(o.payment.discount));
-      const p=await t.paymentAttempt.create({data:{orderId,...quote}});paymentId=p.id;message=`Demo payment created for ₹${quote.amount}. The 5% discount is on merchandise and the COD fee is removed. Complete the explicit payment simulation to mark it paid.`;
+      const pending=await t.paymentAttempt.findFirst({where:{orderId,status:"PENDING",purpose:"COD_CONVERSION"},orderBy:{createdAt:"desc"}});
+      const p=pending??await t.paymentAttempt.create({data:{orderId,...quote}});paymentId=p.id;message=`Demo payment created for ₹${quote.amount}. The 5% discount is on merchandise and the COD fee is removed. Complete the explicit payment simulation to mark it paid.`;
     }else if(input.action==="PAYMENT_SUCCESS"){
       const p=await t.paymentAttempt.findUnique({where:{id:input.paymentId||""}});
       if(!p||p.orderId!==orderId||p.status!=="PENDING")throw new HttpError(409,"No matching pending simulated payment.");
@@ -128,7 +148,7 @@ export async function createTestOrder(input:any,webhookId?:string){
       await t.webhookEvent.create({data:{id:eventKey,provider:"orders",payloadHash:hash}});
     }
     const stock=await t.inventory.updateMany({where:{sku:p.sku,size:input.size,available:{gte:input.quantity}},data:{available:{decrement:input.quantity}}});if(!stock.count)throw new HttpError(409,"Requested size is out of stock.");
-    await t.order.create({data:{id,customerId:c.id,scenarioTag:"runtime_test_order",createdAt:policyNow(),status:"UNFULFILLED",fulfillmentStatus:"UNFULFILLED",shippingAddress:c.address!,verificationPhone:c.phone,notes:["New evaluator-created demo order; not part of the 30 source orders."],sourceRecord:{runtime:true},isDemo:true,items:{create:{id:`${id}:0`,sourceIndex:0,sku:p.sku,productName:p.name,quantity:input.quantity,unitPrice:p.price,size:input.size,isSaleItem:p.sku==="WL-SAL-06",isInnerwear:p.category==="Innerwear"}},payment:{create:{method:input.paymentMethod,status:input.paymentMethod==="COD"?"PENDING":"PAID",subtotal,shippingFee:ship,codFee:cod,discount:0,total:subtotal+ship+cod,amountDueAtDelivery:cod?subtotal+ship+cod:0}}}});
+    await t.order.create({data:{id,customerId:c.id,origin:webhookId?"ORDER_WEBHOOK":"TEAM_TEST",scenarioTag:"runtime_test_order",createdAt:policyNow(),status:"UNFULFILLED",fulfillmentStatus:"UNFULFILLED",shippingAddress:c.address!,verificationPhone:c.phone,notes:["Evaluator-created demo order; not part of the 30 source orders."],sourceRecord:{runtime:true},isDemo:true,inventoryReserved:true,items:{create:{id:`${id}:0`,sourceIndex:0,sku:p.sku,productName:p.name,quantity:input.quantity,unitPrice:p.price,size:input.size,isSaleItem:p.sku==="WL-SAL-06",isInnerwear:p.category==="Innerwear"}},payment:{create:{method:input.paymentMethod,status:input.paymentMethod==="COD"?"PENDING":"PAID",subtotal,shippingFee:ship,codFee:cod,discount:0,total:subtotal+ship+cod,amountDueAtDelivery:cod?subtotal+ship+cod:0}}}});
     await audit(t,"TEAM","Created test order",id,{}, {customerId:c.id,sku:p.sku});
   });
   if(cod){const o=await prisma.order.findUniqueOrThrow({where:{id},include:orderInclude});const r=await riskFor(o);if(r.eligible&&(!o.cod||o.cod.status==="PENDING")&&o.fulfillmentStatus==="UNFULFILLED"&&o.status!=="CANCELLED")await startCod(id);else if(!r.eligible&&o.status==="UNFULFILLED")await prisma.order.update({where:{id},data:{status:"ON_HOLD",notes:{push:r.eligibilityReason}}});}
@@ -143,6 +163,7 @@ export async function courierEvent(orderId:string,input:any){
     if(seen){if(seen.payloadHash!==hash)throw new HttpError(409,"Event ID was reused with different content.");duplicate=true;return;}
     const o=await t.order.findUniqueOrThrow({where:{id:orderId},include:{shipments:true,payment:true,customer:true}});
     if(o.status==="CANCELLED")throw new HttpError(409,"A cancelled order cannot receive new courier updates.");
+    if(o.fulfillmentStatus==="UNFULFILLED"&&(o.status==="ON_HOLD"||(o.payment?.method==="PREPAID"&&o.payment.status!=="PAID")))throw new HttpError(409,"An on-hold or unpaid prepaid order cannot be dispatched.");
     if(o.fulfillmentStatus==="UNFULFILLED"&&input.status!=="PICKED_UP")throw new HttpError(409,"Trigger PICKED_UP before subsequent courier events.");
     if(o.payment?.method==="COD"&&o.fulfillmentStatus==="UNFULFILLED"){const c=await t.cODConfirmation.findUnique({where:{orderId}});if(c?.status!=="CONFIRMED")throw new HttpError(409,"Confirm COD before dispatch.");const pin=await t.pincodeServiceability.findUnique({where:{pincode:String((o.shippingAddress as any).pincode)}});if(!codEligibility(Number(o.payment.total),!!pin?.codAvailable).eligible)throw new HttpError(409,"COD is ineligible for dispatch.");}
     let s=o.shipments[0];

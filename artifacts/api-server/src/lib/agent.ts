@@ -49,6 +49,8 @@ export async function commitPending(ctx:Context){
     if(p.action==="CANCEL"){
       const d=cancellation(o.fulfillmentStatus!=="UNFULFILLED");if(!d.eligible)throw new HttpError(409,d.reason);
       if(["CANCELLED","ON_HOLD"].includes(o.status))throw new HttpError(409,"This order is already cancelled or held.");
+      const {releaseReservedStock}=await import("./checkout");
+      await releaseReservedStock(t,o.id);
       await t.order.update({where:{id:o.id},data:{status:"CANCELLED"}});
       if(o.payment.method==="PREPAID"&&o.payment.status==="PAID")await t.order.update({where:{id:o.id},data:{notes:{push:"Cancellation confirmed; prepaid refund requires support processing. No payout has been fabricated."}}});
       if(o.cod)await t.cODConfirmation.update({where:{orderId:o.id},data:{status:"CANCELLED"}});
@@ -157,7 +159,7 @@ export async function respondAgent(conversationId:string,content:string){
   await prisma.conversation.update({where:{id:conversationId},data:{language}});
   const reply=async(text:string)=>{await prisma.$transaction(async t=>{await t.$queryRaw`SELECT id FROM "Conversation" WHERE id=${conversationId} FOR UPDATE`;const fresh=await t.conversation.findUniqueOrThrow({where:{id:conversationId}});if(fresh.status==="AI_HANDLING"&&fresh.version===ctx.version)await t.message.create({data:{conversationId,role:"assistant",content:text}});});};
   try{
-    const hasOrderId=/\b(?:WL\d{5}|DEMO-[A-Z0-9-]+|EVAL-[A-Z0-9-]+)\b/i.test(content);
+    const hasOrderId=/\b(?:WL\d{5}|WL-DEMO-[A-Z0-9-]+|DEMO-[A-Z0-9-]+|EVAL-[A-Z0-9-]+)\b/i.test(content);
     if(/(?:mera\s+order|my\s+order|track\s+my\s+order|where\s+is\s+my\s+order|order\s+kab|ऑर्डर)/i.test(content)&&!hasOrderId){
       await reply(localized("Please share your order ID and the phone number used for that order, and I’ll check its status. I can’t disclose order details before verification.","Order status check karne ke liye order ID aur us order ka registered phone number bhejiye. Verification ke bina details share nahi kar sakta.",language));return;
     }

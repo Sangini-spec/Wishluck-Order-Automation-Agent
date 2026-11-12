@@ -32,8 +32,8 @@ Fictional evaluator app: a customer storefront/chat and team order-operations ce
 
 ## Product
 
-- Customers can browse six products, inspect own orders, manage new-account profiles and chat in English/Hindi/Hinglish.
-- The team can review live chats and tool traces, take over, inspect source warnings and risk, simulate COD/courier events and configure timing settings.
+- Customers browse products, add variants/quantities to a persistent cart, check out with an entered phone/address, respond to COD confirmation, simulate payment outcomes, inspect their own orders and chat in English/Hindi/Hinglish. Checkout prices and ownership are server-controlled; idempotency and atomic inventory reservations protect submissions.
+- Customer checkout automatically creates Operations orders, COD risk assessments and durable confirmation/reminder/hold jobs. The team monitors them, reviews chats and tool traces, takes over exceptions and configures timing. Team-created test orders are auxiliary evaluator tools.
 
 ## User preferences
 

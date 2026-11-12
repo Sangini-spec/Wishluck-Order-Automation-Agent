@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link, useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
 import { Banknote, Check, CreditCard, Loader2, MapPinned, Play, X, BadgeCheck } from 'lucide-react';
-import { useGetOrders, useGetOrder, getGetOrderQueryKey, useRespondCod, type CodResponse, type Order } from '@workspace/api-client-react';
+import { useGetOrders, getGetOrdersQueryKey, useGetOrder, getGetOrderQueryKey, useRespondCod, type CodResponse, type Order } from '@workspace/api-client-react';
 import { PageHeader, Pill, Rows, ErrorState, Empty, Panel, KV } from '@/components/kit';
 import { RiskGauge, Warnings, addressLines } from '@/components/order-detail';
 import { CreateTestOrder } from '@/components/test-order';
@@ -114,7 +114,7 @@ export default function Cod() {
   const search = useSearch();
   const [, nav] = useLocation();
   const sel = new URLSearchParams(search).get('order') ?? '';
-  const { data, isLoading, error, refetch } = useGetOrders();
+  const { data, isLoading, error, refetch } = useGetOrders(undefined, { query: { queryKey: getGetOrdersQueryKey(), refetchInterval: 15000 } });
   const [band, setBand] = useState('ALL');
   const cods = useMemo(() => (data ?? []).filter((o) => o.paymentMethod === 'COD')
     .map((o) => ({ o, score: num(rec(o.risk).score ?? rec(o.cod).riskScore), band: str(rec(o.risk).band ?? rec(o.cod).riskBand, 'UNKNOWN') }))
@@ -123,7 +123,7 @@ export default function Cod() {
   const shown = cods.filter((c) => band === 'ALL' || c.band === band);
   return (
     <>
-      <PageHeader kicker="Cash on delivery" title="COD risk desk" sub="Every score comes with its reasons. Simulate the customer's confirmation, cancellation, address edit or online payment.">
+      <PageHeader kicker="Cash on delivery" title="COD risk desk" sub="Customer checkouts land here automatically as they are placed. Every score comes with its reasons; team buttons below simulate customer choices for imported orders.">
         <CreateTestOrder />
       </PageHeader>
       {error ? <ErrorState error={error} retry={refetch} /> : (
@@ -132,14 +132,14 @@ export default function Cod() {
             <div className="flex flex-wrap gap-1">
               {['ALL', ...bands].map((b) => <button key={b} data-testid={`filter-band-${b.toLowerCase()}`} onClick={() => setBand(b)} className={cn('rounded-full border px-2.5 py-1 text-xs', band === b ? 'border-indigo bg-indigo text-paper' : 'bg-card hover:bg-accent')}>{b === 'ALL' ? 'All bands' : b}</button>)}
             </div>
-            {isLoading ? <Rows n={6} /> : shown.length === 0 ? <Panel><Empty icon={<Banknote className="h-6 w-6" />} title="No COD orders" body="Create a COD test order to exercise the workflow." /></Panel> : (
+            {isLoading ? <Rows n={6} /> : shown.length === 0 ? <Panel><Empty icon={<Banknote className="h-6 w-6" />} title="No COD orders" body="Waiting for customers. COD orders placed in the storefront appear here live." /></Panel> : (
               <ul className="max-h-[70dvh] space-y-1 overflow-auto pr-1">
                 {shown.map(({ o, score, band: b }) => (
                   <li key={o.id}>
                     <button data-testid={`row-cod-${o.id}`} onClick={() => nav(`/ops/cod?order=${o.id}`)} className={cn('flex w-full items-center gap-3 rounded-xl border px-3 py-2 text-left transition-all', sel === o.id ? 'border-indigo bg-card shadow-sm' : 'border-transparent hover:bg-card')}>
                       <div className={cn('grid h-10 w-10 shrink-0 place-items-center rounded-lg font-data text-sm font-medium', /HIGH/i.test(b) ? 'bg-madder/15 text-madder' : /MED/i.test(b) ? 'bg-turmeric/20 text-[hsl(32_80%_30%)]' : 'bg-leaf/10 text-leaf')}>{score ?? '—'}</div>
                       <div className="min-w-0 flex-1"><div className="font-data text-sm">{o.id}</div><div className="truncate text-xs text-muted-foreground">{o.customerName} · {inr(o.total)}</div></div>
-                      <Pill value={rec(o.cod).status ?? o.status} className="hidden xl:inline-flex" />
+                      {o.origin && /STORE|CHECKOUT|CUSTOMER/i.test(o.origin) && <span className="rounded bg-turmeric/25 px-1.5 py-0.5 font-data text-[9px] uppercase tracking-wider">Store</span>}<Pill value={rec(o.cod).status ?? o.status} className="hidden xl:inline-flex" />
                     </button>
                   </li>
                 ))}

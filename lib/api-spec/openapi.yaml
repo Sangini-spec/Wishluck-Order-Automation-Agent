@@ -106,6 +106,56 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Dashboard" }
+  /cart:
+    get:
+      operationId: getCart
+      responses:
+        "200":
+          description: Signed-in customer's persistent cart and live stock
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+    patch:
+      operationId: changeCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartItemChange" }
+      responses:
+        "200":
+          description: Updated cart
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+  /checkout/quote:
+    post:
+      operationId: getCheckoutQuote
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutDetails" }
+      responses:
+        "200":
+          description: Server-calculated order quote and COD eligibility
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckoutQuote" }
+  /checkout:
+    post:
+      operationId: submitCheckout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CheckoutRequest" }
+      responses:
+        "201":
+          description: Persisted customer-owned order with queued COD confirmation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
   /orders:
     get:
       operationId: getOrders
@@ -158,6 +208,22 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Result" }
+  /orders/{id}/payment:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: simulateCustomerPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentSimulationInput" }
+      responses:
+        "200":
+          description: Simulated customer payment outcome; no real charge
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
   /orders/{id}/courier:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -401,6 +467,69 @@ components:
         phone: { type: string }
         address: { $ref: "#/components/schemas/JsonRecord" }
         editable: { type: boolean }
+    CartLine:
+      type: object
+      required: [sku, name, size, quantity, unitPrice, available, lineTotal]
+      properties:
+        sku: { type: string }
+        name: { type: string }
+        size: { type: string }
+        quantity: { type: integer }
+        unitPrice: { type: number }
+        available: { type: integer }
+        lineTotal: { type: number }
+    Cart:
+      type: object
+      required: [version, items, subtotal, count]
+      properties:
+        version: { type: integer }
+        items: { type: array, items: { $ref: "#/components/schemas/CartLine" } }
+        subtotal: { type: number }
+        count: { type: integer }
+    CartItemChange:
+      type: object
+      required: [sku, size, quantity, mode]
+      properties:
+        sku: { type: string }
+        size: { type: string }
+        quantity: { type: integer, minimum: 0, maximum: 10 }
+        mode: { type: string, enum: [ADD, SET] }
+    CheckoutDetails:
+      type: object
+      required: [paymentMethod, phone, address]
+      properties:
+        paymentMethod: { type: string, enum: [COD, PREPAID] }
+        phone: { type: string, minLength: 10 }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+    CheckoutRequest:
+      type: object
+      required: [paymentMethod, phone, address, cartVersion, idempotencyKey]
+      properties:
+        paymentMethod: { type: string, enum: [COD, PREPAID] }
+        phone: { type: string, minLength: 10 }
+        address: { $ref: "#/components/schemas/JsonRecord" }
+        cartVersion: { type: integer, minimum: 1 }
+        idempotencyKey: { type: string, minLength: 12, maxLength: 100 }
+        saveProfile: { type: boolean }
+    CheckoutQuote:
+      type: object
+      required: [subtotal, shippingFee, codFee, total, eligible, reason, cartVersion, items, demoPayment]
+      properties:
+        subtotal: { type: number }
+        shippingFee: { type: number }
+        codFee: { type: number }
+        total: { type: number }
+        eligible: { type: boolean }
+        reason: { type: string }
+        cartVersion: { type: integer }
+        items: { type: array, items: { $ref: "#/components/schemas/CartLine" } }
+        demoPayment: { type: boolean }
+    PaymentSimulationInput:
+      type: object
+      required: [paymentId, action]
+      properties:
+        paymentId: { type: string }
+        action: { type: string, enum: [SUCCEED, FAIL] }
     ProfileInput:
       type: object
       required: [phone, address]
@@ -446,6 +575,8 @@ components:
         items: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         shippingAddress: { $ref: "#/components/schemas/JsonRecord" }
         payment: { $ref: "#/components/schemas/JsonRecord" }
+        paymentAttempts: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        origin: { type: string }
         shipments: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         returns: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         refunds: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }

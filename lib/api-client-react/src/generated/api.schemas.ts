@@ -100,6 +100,105 @@ export interface CustomerProfile {
   editable: boolean;
 }
 
+export interface CartLine {
+  sku: string;
+  name: string;
+  size: string;
+  quantity: number;
+  unitPrice: number;
+  available: number;
+  lineTotal: number;
+}
+
+export interface Cart {
+  version: number;
+  items: CartLine[];
+  subtotal: number;
+  count: number;
+}
+
+export type CartItemChangeMode = typeof CartItemChangeMode[keyof typeof CartItemChangeMode];
+
+
+export const CartItemChangeMode = {
+  ADD: 'ADD',
+  SET: 'SET',
+} as const;
+
+export interface CartItemChange {
+  sku: string;
+  size: string;
+  /**
+     * @minimum 0
+     * @maximum 10
+     */
+  quantity: number;
+  mode: CartItemChangeMode;
+}
+
+export type CheckoutDetailsPaymentMethod = typeof CheckoutDetailsPaymentMethod[keyof typeof CheckoutDetailsPaymentMethod];
+
+
+export const CheckoutDetailsPaymentMethod = {
+  COD: 'COD',
+  PREPAID: 'PREPAID',
+} as const;
+
+export interface CheckoutDetails {
+  paymentMethod: CheckoutDetailsPaymentMethod;
+  /** @minLength 10 */
+  phone: string;
+  address: JsonRecord;
+}
+
+export type CheckoutRequestPaymentMethod = typeof CheckoutRequestPaymentMethod[keyof typeof CheckoutRequestPaymentMethod];
+
+
+export const CheckoutRequestPaymentMethod = {
+  COD: 'COD',
+  PREPAID: 'PREPAID',
+} as const;
+
+export interface CheckoutRequest {
+  paymentMethod: CheckoutRequestPaymentMethod;
+  /** @minLength 10 */
+  phone: string;
+  address: JsonRecord;
+  /** @minimum 1 */
+  cartVersion: number;
+  /**
+     * @minLength 12
+     * @maxLength 100
+     */
+  idempotencyKey: string;
+  saveProfile?: boolean;
+}
+
+export interface CheckoutQuote {
+  subtotal: number;
+  shippingFee: number;
+  codFee: number;
+  total: number;
+  eligible: boolean;
+  reason: string;
+  cartVersion: number;
+  items: CartLine[];
+  demoPayment: boolean;
+}
+
+export type PaymentSimulationInputAction = typeof PaymentSimulationInputAction[keyof typeof PaymentSimulationInputAction];
+
+
+export const PaymentSimulationInputAction = {
+  SUCCEED: 'SUCCEED',
+  FAIL: 'FAIL',
+} as const;
+
+export interface PaymentSimulationInput {
+  paymentId: string;
+  action: PaymentSimulationInputAction;
+}
+
 export interface ProfileInput {
   /** @minLength 10 */
   phone: string;
@@ -141,6 +240,8 @@ export interface Order {
   items: JsonRecord[];
   shippingAddress: JsonRecord;
   payment?: JsonRecord;
+  paymentAttempts?: JsonRecord[];
+  origin?: string;
   shipments?: JsonRecord[];
   returns?: JsonRecord[];
   refunds?: JsonRecord[];

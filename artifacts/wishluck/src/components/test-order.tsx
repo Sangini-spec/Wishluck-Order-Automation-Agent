@@ -35,7 +35,7 @@ export function CreateTestOrder() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <button data-testid="button-new-test-order" className="inline-flex items-center gap-2 rounded-lg bg-indigo px-3 py-2 text-sm font-medium text-paper hover:opacity-95"><FlaskConical className="h-4 w-4" />Create test order</button>
+        <button data-testid="button-new-test-order" title="Evaluator shortcut: bypasses the customer storefront" className="inline-flex items-center gap-2 rounded-lg border border-dashed bg-card px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"><FlaskConical className="h-3.5 w-3.5" />Evaluator shortcut: test order</button>
       </DialogTrigger>
       <DialogContent className="bg-card">
         <DialogHeader>
