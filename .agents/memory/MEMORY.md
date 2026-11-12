@@ -1,1 +1,2 @@
 - [Demo data corrections](source-data-decisions.md) — user authorized assignment-aligned corrections; keep original separately and avoid seed-error commentary in the app.
+- [Customer-led orders](customer-order-flow.md) — normal orders should originate in customer cart/checkout; Operations monitors and handles COD exceptions.
