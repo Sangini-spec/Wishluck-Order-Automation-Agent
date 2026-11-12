@@ -1,0 +1,390 @@
+{
+  "startedAt": "2026-11-12T14:11:04.505Z",
+  "recordedAt": "2026-11-12T14:11:11.517Z",
+  "command": "pnpm test:report",
+  "total": 76,
+  "passed": 76,
+  "failed": 0,
+  "cases": [
+    {
+      "name": "evaluation conversations, COD and saved NDR cases do not affect live metrics",
+      "passed": true,
+      "durationMs": 226.046336
+    },
+    {
+      "name": "explicit customer resolution is owned, idempotent and counted as self service",
+      "passed": true,
+      "durationMs": 398.420984
+    },
+    {
+      "name": "cost estimate uses documented public token rates, separately from actual billing",
+      "passed": true,
+      "durationMs": 0.537352
+    },
+    {
+      "name": "fresh processes share the persisted demo clock instead of resetting delivered-order ages",
+      "passed": true,
+      "durationMs": 576.042156
+    },
+    {
+      "name": "a new customer checks out, responds to COD, and owns the whole flow",
+      "passed": true,
+      "durationMs": 2310.473518
+    },
+    {
+      "name": "active dataset contains all required entity collections",
+      "passed": true,
+      "durationMs": 0.982513
+    },
+    {
+      "name": "active dataset has valid counts and no relationship or policy inconsistencies",
+      "passed": true,
+      "durationMs": 4.172496
+    },
+    {
+      "name": "assignment's exact 4600 incomplete-address COD case is high risk",
+      "passed": true,
+      "durationMs": 0.141471
+    },
+    {
+      "name": "COD exclusions require prepaid and COD refund specifies payout method",
+      "passed": true,
+      "durationMs": 0.137652
+    },
+    {
+      "name": "stock evidence accepts successful integrated eligibility with exact SKU and size",
+      "passed": true,
+      "durationMs": 11.375667
+    },
+    {
+      "name": "stock evidence accepts successful dedicated inventory lookup with exact SKU and size",
+      "passed": true,
+      "durationMs": 1.051324
+    },
+    {
+      "name": "stock evidence rejects wrong product",
+      "passed": true,
+      "durationMs": 0.091337
+    },
+    {
+      "name": "stock evidence rejects wrong variant size",
+      "passed": true,
+      "durationMs": 0.070312
+    },
+    {
+      "name": "stock evidence rejects failed tool execution",
+      "passed": true,
+      "durationMs": 0.834126
+    },
+    {
+      "name": "stock evidence rejects positive stock and unsupported eligibility",
+      "passed": true,
+      "durationMs": 0.111975
+    },
+    {
+      "name": "stock evidence rejects missing results and unrelated tool names",
+      "passed": true,
+      "durationMs": 0.666626
+    },
+    {
+      "name": "stock evidence cannot infer an unavailable variant from a different inventory row",
+      "passed": true,
+      "durationMs": 0.112366
+    },
+    {
+      "name": "COD return collects refund preference and persists the confirmed quantity and amount",
+      "passed": true,
+      "durationMs": 656.511649
+    },
+    {
+      "name": "multi-unit refund uses total requested value for mandatory review",
+      "passed": true,
+      "durationMs": 118.281641
+    },
+    {
+      "name": "Hindi consent and result stay Hindi, and audit records real status transitions",
+      "passed": true,
+      "durationMs": 148.369817
+    },
+    {
+      "name": "same unresolved issue persists across turns and escalates at its configured limit",
+      "passed": true,
+      "durationMs": 140.528555
+    },
+    {
+      "name": "COD hold and confirmation share a lock and cannot leave contradictory state",
+      "passed": true,
+      "durationMs": 230.969354
+    },
+    {
+      "name": "NDR consent rechecks the date and delivered cases do not trigger stale handovers",
+      "passed": true,
+      "durationMs": 339.554979
+    },
+    {
+      "name": "NDR escalates two unanswered failures, but not one failure or a customer clarification",
+      "passed": true,
+      "durationMs": 434.926473
+    },
+    {
+      "name": "NDR refusal requires a reason and records acknowledged RTO without inventing delivery",
+      "passed": true,
+      "durationMs": 347.287906
+    },
+    {
+      "name": "NDR rejects invalid instructions and records alternate phone and landmark on the order",
+      "passed": true,
+      "durationMs": 385.146567
+    },
+    {
+      "name": "COD value boundary 298",
+      "passed": true,
+      "durationMs": 7.26643
+    },
+    {
+      "name": "COD value boundary 299",
+      "passed": true,
+      "durationMs": 0.193538
+    },
+    {
+      "name": "COD value boundary 4999",
+      "passed": true,
+      "durationMs": 0.109667
+    },
+    {
+      "name": "COD value boundary 5000",
+      "passed": true,
+      "durationMs": 2.869277
+    },
+    {
+      "name": "COD blocked on unavailable pincode",
+      "passed": true,
+      "durationMs": 2.053006
+    },
+    {
+      "name": "pre-shipment cancellation",
+      "passed": true,
+      "durationMs": 0.205744
+    },
+    {
+      "name": "shipped cancellation explains 99 deduction",
+      "passed": true,
+      "durationMs": 1.317274
+    },
+    {
+      "name": "regular return eligible",
+      "passed": true,
+      "durationMs": 0.312686
+    },
+    {
+      "name": "exactly seven days allowed",
+      "passed": true,
+      "durationMs": 1.023736
+    },
+    {
+      "name": "seven days plus 1ms rejected",
+      "passed": true,
+      "durationMs": 6.301799
+    },
+    {
+      "name": "no return before delivery",
+      "passed": true,
+      "durationMs": 0.139756
+    },
+    {
+      "name": "future delivery rejected",
+      "passed": true,
+      "durationMs": 1.583108
+    },
+    {
+      "name": "innerwear return rejected",
+      "passed": true,
+      "durationMs": 1.74255
+    },
+    {
+      "name": "innerwear exchange rejected",
+      "passed": true,
+      "durationMs": 0.132339
+    },
+    {
+      "name": "sale refund rejected",
+      "passed": true,
+      "durationMs": 0.05521
+    },
+    {
+      "name": "sale size exchange allowed",
+      "passed": true,
+      "durationMs": 1.075235
+    },
+    {
+      "name": "unused condition required",
+      "passed": true,
+      "durationMs": 0.084656
+    },
+    {
+      "name": "tags required",
+      "passed": true,
+      "durationMs": 0.053149
+    },
+    {
+      "name": "zero stock exchange rejected",
+      "passed": true,
+      "durationMs": 0.050302
+    },
+    {
+      "name": "second exchange rejected",
+      "passed": true,
+      "durationMs": 0.100661
+    },
+    {
+      "name": "three recent returns manual review",
+      "passed": true,
+      "durationMs": 0.06824
+    },
+    {
+      "name": "two recent returns not automatic manual review",
+      "passed": true,
+      "durationMs": 0.059322
+    },
+    {
+      "name": "refund exactly 1500 not threshold review",
+      "passed": true,
+      "durationMs": 0.060215
+    },
+    {
+      "name": "refund 1501 review",
+      "passed": true,
+      "durationMs": 0.12989
+    },
+    {
+      "name": "damage without photo review",
+      "passed": true,
+      "durationMs": 0.071057
+    },
+    {
+      "name": "damage with photo can follow normal rule",
+      "passed": true,
+      "durationMs": 0.070866
+    },
+    {
+      "name": "shipping exactly 999 costs79",
+      "passed": true,
+      "durationMs": 0.05828
+    },
+    {
+      "name": "shipping above999 free",
+      "passed": true,
+      "durationMs": 0.040547
+    },
+    {
+      "name": "prepaid5 percent only merchandise",
+      "passed": true,
+      "durationMs": 1.239411
+    },
+    {
+      "name": "prepaid conversion keeps the original source discount",
+      "passed": true,
+      "durationMs": 0.149387
+    },
+    {
+      "name": "risk4600 weak firsttime HIGH",
+      "passed": true,
+      "durationMs": 0.303177
+    },
+    {
+      "name": "risk bounded100",
+      "passed": true,
+      "durationMs": 2.317786
+    },
+    {
+      "name": "risk explainability",
+      "passed": true,
+      "durationMs": 0.15485
+    },
+    {
+      "name": "low risk established customer",
+      "passed": true,
+      "durationMs": 0.273892
+    },
+    {
+      "name": "phone format comparison",
+      "passed": true,
+      "durationMs": 1.668732
+    },
+    {
+      "name": "redaction removes structured contacts",
+      "passed": true,
+      "durationMs": 0.430027
+    },
+    {
+      "name": "active source counts and references validate",
+      "passed": true,
+      "durationMs": 2.200424
+    },
+    {
+      "name": "seed detects duplicate IDs",
+      "passed": true,
+      "durationMs": 1.815852
+    },
+    {
+      "name": "seed detects broken owner reference",
+      "passed": true,
+      "durationMs": 0.690898
+    },
+    {
+      "name": "seed detects changed financial arithmetic",
+      "passed": true,
+      "durationMs": 1.754126
+    },
+    {
+      "name": "active data has no ineligible COD records",
+      "passed": true,
+      "durationMs": 1.569501
+    },
+    {
+      "name": "active data has consistent delivery dates",
+      "passed": true,
+      "durationMs": 0.300173
+    },
+    {
+      "name": "nine source return records remain NONE",
+      "passed": true,
+      "durationMs": 0.155177
+    },
+    {
+      "name": "B7 high-risk ₹4,600 COD confirmation and exactly one reminder/hold",
+      "passed": true,
+      "durationMs": 361.026429
+    },
+    {
+      "name": "COD confirmation dispatch, then duplicate response blocked",
+      "passed": true,
+      "durationMs": 232.367662
+    },
+    {
+      "name": "prepaid conversion never charges or marks PAID before success",
+      "passed": true,
+      "durationMs": 208.336941
+    },
+    {
+      "name": "B8 failed delivery sends reason, accepts verified retry, updates mock courier",
+      "passed": true,
+      "durationMs": 439.366546
+    },
+    {
+      "name": "customer API scopes orders, preserves source profiles and saves a new-account profile",
+      "passed": true,
+      "durationMs": 345.509384
+    },
+    {
+      "name": "signed courier webhook is idempotent; bad signature cannot mutate",
+      "passed": true,
+      "durationMs": 122.053577
+    },
+    {
+      "name": "imported source relationships and IDs still exist after workflow simulations",
+      "passed": true,
+      "durationMs": 24.39409
+    }
+  ]
+}

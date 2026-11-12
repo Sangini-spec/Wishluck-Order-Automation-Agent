@@ -12,6 +12,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "node --env-file-if-exists=.env --import tsx src/seed-cli.ts",
     "test": "node --env-file-if-exists=.env --import tsx --test src/tests/*.test.ts",
+    "test:report": "node --env-file-if-exists=.env --import tsx --test --test-reporter=../scripts/backend-test-reporter.mjs src/tests/*.test.ts",
     "evaluate": "node --env-file-if-exists=.env --import tsx src/evaluate.ts"
   },
   "dependencies": {

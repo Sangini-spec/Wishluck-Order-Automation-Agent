@@ -9,7 +9,8 @@ import { gradeConversation } from "./evaluation/grading";
 import { evaluationOrder,prepareEventCase,finishCourierJobs,releaseEvaluationExchangeStock } from "./evaluation/fixtures";
 import { estimateTokenCost,llmRateCard } from "./lib/llm-cost";
 import { workflowRules } from "./lib/workflow-rules";
-type Case={name:string;customer:string;turns:string[];tools?:string[];outcome:RegExp;handover?:boolean;noTools?:boolean;expectedIntent?:string;kind?:"COD"|"NDR";cloneSource?:string;complete?:boolean};
+import { hasUnavailableStockEvidence } from "./evaluation/tool-evidence";
+type Case={name:string;customer:string;turns:string[];tools?:string[];stockEvidence?:{sku:string;size:string};outcome:RegExp;handover?:boolean;noTools?:boolean;expectedIntent?:string;kind?:"COD"|"NDR";cloneSource?:string;complete?:boolean};
 const cases:Case[]=[
   {name:"B1 correct phone, unshipped tracking is truthful",customer:"CUST-1001",turns:["Where is my order WL10234? Registered phone +91-9000010000."],tools:["verify_customer","get_order_details","get_shipment_status"],outcome:/not.ship|unfulfilled|no.ship|dispatch|not.*dispatch|hasn.t.ship/i},
   {name:"B2 wrong phone leaks nothing",customer:"CUST-1001",turns:["Where is my order WL10234? Phone 9000099999."],tools:["verify_customer"],outcome:/verif|match|check/i},
@@ -25,7 +26,7 @@ const cases:Case[]=[
   {name:"Expired 10day return",customer:"CUST-1007",turns:["Return my unused tee with tags. Order WL10240, phone +91-9000010006."],tools:["verify_customer","evaluate_return_eligibility"],outcome:/7.day|window|expired|outside/i},
   {name:"Expired8day return",customer:"CUST-1030",turns:["Return the kurta from WL10263, phone +91-9000010029. It is unused with tags."],tools:["verify_customer","evaluate_return_eligibility"],outcome:/7.day|window|expired|outside/i},
   {name:"Return without condition evidence prompts clarification",customer:"CUST-1006",turns:["I want to return WL10239. Registered phone +91-9000010005."],tools:["verify_customer"],outcome:/unused|tags|condition/i},
-  {name:"Exchange stock unavailable",customer:"CUST-1027",turns:["Exchange my jeans on WL10260 to size 30. Phone +91-9000010026. They are unused with tags."],tools:["verify_customer","check_inventory"],outcome:/out.of.stock|not.available|unavailable|no.stock/i},
+  {name:"Exchange stock unavailable",customer:"CUST-1027",turns:["Exchange my jeans on WL10260 to size 30. Phone +91-9000010026. They are unused with tags."],tools:["verify_customer"],stockEvidence:{sku:"WL-JNS-03",size:"30"},outcome:/out.of.stock|not.available|unavailable|no.stock/i},
   {name:"Catalogue only, no heightweight guess",customer:"CUST-1001",turns:["Which kurta size should I buy for 5 feet 8 and 70kg?"],outcome:/chart|measurement|cannot|can.t|support|chest/i},
   {name:"Policy shipping metro",customer:"CUST-1001",turns:["What is your metro delivery time and shipping fee?"],tools:["get_policy"],outcome:/2.{0,6}4|999|79/i},
   {name:"COD policy fees",customer:"CUST-1001",turns:["What is the COD fee and allowed order amount?"],tools:["get_policy"],outcome:/49/},
@@ -53,7 +54,7 @@ const runId=`evaluation-${Date.now()}`,root=resolve(process.cwd(),".."),director
 mkdirSync(resolve(directory,"history"),{recursive:true});
 for(const ext of ["json","md"]){const file=resolve(directory,`agent-evaluation.${ext}`);if(existsSync(file))writeFileSync(resolve(directory,`history/${runId}-previous.${ext}`),readFileSync(file));}
 const dataset=await prisma.seedDataset.findUniqueOrThrow({where:{id:"wishluck-source"}});
-const codeHash=createHash("sha256").update(["agent","policy","operations","queue","workflow-rules","mock-courier","db"].map(p=>readFileSync(resolve(process.cwd(),`src/lib/${p}.ts`),"utf8")).join("\n")).update(["evaluation/fixtures.ts","evaluation/grading.ts","evaluate.ts"].map(p=>readFileSync(resolve(process.cwd(),`src/${p}`),"utf8")).join("\n")).digest("hex");
+const codeHash=createHash("sha256").update(["agent","policy","operations","queue","workflow-rules","mock-courier","db"].map(p=>readFileSync(resolve(process.cwd(),`src/lib/${p}.ts`),"utf8")).join("\n")).update(["evaluation/fixtures.ts","evaluation/grading.ts","evaluation/tool-evidence.ts","evaluate.ts"].map(p=>readFileSync(resolve(process.cwd(),`src/${p}`),"utf8")).join("\n")).digest("hex");
 const rules=await workflowRules();
 const selectedArgument=process.argv.find(a=>a.startsWith("--cases="));
 const selected=selectedArgument?selectedArgument.slice(8).split(",").map(Number):null;
@@ -83,7 +84,8 @@ const results=await batchProcess(scheduled,async({c,index})=>{
       requests:requests.map(r=>({id:r.id,kind:r.kind,quantity:r.quantity,refundMethod:r.refundMethod,refundAmount:r.refundAmount})),
       consents:stored.pendingActions.map(p=>({action:p.action,status:p.status,payload:Object.fromEntries(Object.entries(p.payload as object).filter(([k])=>["retryDate","refuse","kind","quantity","requestedSize","refundMethod"].includes(k)))})),
       courierInstructions:commands,conversationStatus:stored.status,policy:dataset.policy,rules};
-    const toolPass=(c.tools||[]).every(t=>toolNames.includes(t))&&(!c.noTools||toolNames.length===0);
+    const stockEvidencePass=!c.stockEvidence||hasUnavailableStockEvidence(stored.tools,c.stockEvidence.sku,c.stockEvidence.size);
+    const toolPass=(c.tools||[]).every(t=>stored.tools.some(trace=>trace.toolName===t&&trace.status==="SUCCESS"))&&(!c.noTools||toolNames.length===0)&&stockEvidencePass;
     const intentPass=stored.intent===c.expectedIntent;
     let statePass=!c.handover||stored.status==="NEEDS_HUMAN";
     if(c.complete&&c.kind!=="NDR")statePass=statePass&&requests.length===1;
@@ -99,7 +101,7 @@ const results=await batchProcess(scheduled,async({c,index})=>{
     const policyPass=c.outcome.test(text)&&statePass&&semantic.policyCorrect;
     const pass=toolPass&&intentPass&&policyPass&&privacyPass&&semantic.grounded&&semantic.languageCorrect;
     logger.info({case:index+1,total:cases.length,pass},"Evaluation case completed");
-    return {case:index+1,name:c.name,expectedIntent:c.expectedIntent,actualIntent:stored.intent,intentPass,conversationId:conv.id,fixtureOrderId:fixture?.id,expectedTools:c.tools||[],actualTools:toolNames,toolPass,statePass,privacyPass,policyPass,pass,semantic,latencyMs,
+    return {case:index+1,name:c.name,expectedIntent:c.expectedIntent,actualIntent:stored.intent,intentPass,conversationId:conv.id,fixtureOrderId:fixture?.id,expectedTools:c.tools||[],requiredStockEvidence:c.stockEvidence,stockEvidencePass,actualTools:toolNames,toolPass,statePass,privacyPass,policyPass,pass,semantic,latencyMs,
       inputTokens:runs.reduce((s,r)=>s+r.inputTokens,0),outputTokens:runs.reduce((s,r)=>s+r.outputTokens,0),response:text,runErrors:runs.filter(r=>r.status==="ERROR").length};
   }catch(e){logger.warn({case:index+1,errorType:e instanceof Error?e.name:"unknown"},"Evaluation case failed");return {case:index+1,name:c.name,expectedTools:c.tools||[],actualTools:[] as string[],pass:false,intentPass:false,toolPass:false,statePass:false,privacyPass:false,policyPass:false,latencyMs:Date.now()-start,inputTokens:0,outputTokens:0,semantic:{grounded:false,inputTokens:0,outputTokens:0,costEstimateUSD:0},response:"Case execution failed; inspect evaluation fixture/trace.",runErrors:1};}
   finally{if(fixture)await releaseEvaluationExchangeStock(fixture.id);}
@@ -116,7 +118,7 @@ if(selected){
   const current=resolve(root,"docs/current-agent-evaluation.md");
   writeFileSync(current,readFileSync(current,"utf8")+note);
   logger.info({total:followup.total,passed:followup.passed},"Focused evaluation completed; full run preserved");
-  await prisma.$disconnect();process.exit(0);
+  await prisma.$disconnect();process.exit(followup.passed===followup.total?0:1);
 }
 const report={runId,recordedAt:new Date().toISOString(),datasetHash:dataset.hash,codeHash,model:"gpt-5.4-mini",total:results.length,passed:results.filter(r=>r.pass).length,
   appendixCasesIncluded:12,intentAccuracy:results.filter(r=>r.intentPass).length/results.length,toolAccuracy:results.filter(r=>r.toolPass).length/results.length,
@@ -136,3 +138,4 @@ writeFileSync(resolve(directory,"agent-evaluation.md"),markdown);
 writeFileSync(resolve(root,"docs/current-agent-evaluation.md"),markdown);
 logger.info({total:report.total,passed:report.passed,averageResponseMs:report.averageResponseMs,costEstimateUSD:report.costEstimateUSD},"Current agent evaluation finished");
 await prisma.$disconnect();
+process.exitCode=report.passed===report.total?0:1;

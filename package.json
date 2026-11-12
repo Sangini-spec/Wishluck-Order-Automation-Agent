@@ -13,6 +13,8 @@
     "dev:frontend": "pnpm --filter @workspace/wishluck run dev",
     "db:setup": "pnpm --filter @workspace/api-server exec prisma generate && pnpm --filter @workspace/api-server exec prisma migrate deploy && pnpm --filter @workspace/api-server run db:seed",
     "test": "pnpm --filter @workspace/api-server run test",
+    "test:report": "pnpm --filter @workspace/api-server run test:report",
+    "report:publish": "node scripts/publish-test-results.mjs",
     "evaluate": "pnpm --filter @workspace/api-server run evaluate"
   },
   "private": true,
