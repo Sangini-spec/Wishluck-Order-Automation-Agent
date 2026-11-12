@@ -15,3 +15,17 @@ storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/conversation:ada103ab-8
 storage_version_token = "1794473904627833"
 content_type = "text/markdown"
 source_uri = "file://wishluck-schema-and-assignment-review.md"
+
+[[outputs]]
+id = "0guhByx9YnE3wj_DJu16Y"
+uri = "file://docs/assignment-compliance-audit.md"
+type = "text"
+title = "WishLuck assignment compliance audit"
+description = "Requirement-by-requirement comparison, tech-stack verdict, workflow gaps, measured performance, submission checklist and recommended fix order. No application changes made."
+logical_id = "eb9bdec9-2cbe-49da-a759-587d39663264"
+content_hash = "sha256:0c4c945400e92fde4c4dc5d58d4a3cf6b8fd734f76840157ea6adf3874a2c125"
+size = 24105
+mtime_ms = 1794480432315
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:822e26ce-b3c9-4a0d-b3b3-e2cc949098b8/eb9bdec9-2cbe-49da-a759-587d39663264/33f39e98-a2e0-4c52-b897-a5263dd5c3c0"
+storage_version_token = "1794480459494863"
+content_type = "text/markdown"
