@@ -32,4 +32,30 @@ export interface SettingsInput {
      * @maximum 99
      */
   riskMediumThreshold: number;
+  /**
+     * @minimum 1
+     * @maximum 1500
+     */
+  handoverRefundThreshold?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverUnresolvedTurns?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverToolFailures?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverClarifications?: number;
+  /**
+     * @maxItems 20
+     * @items.minLength 3
+     * @items.maxLength 80
+     */
+  handoverKeywords?: string[];
 }

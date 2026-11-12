@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import type { Prisma } from "@prisma/client";
 import { prisma, json, policyNow, HttpError, demoMode } from "./db";
 import { scoreRisk, codEligibility, shippingFee, prepaidQuote, redact, phoneDigits } from "./policy";
+import { handoverDefaults,say } from "./workflow-rules";
 export const events=new EventEmitter();events.setMaxListeners(200);
 export const refresh=()=>events.emit("refresh");
 export const orderInclude={customer:true,payment:true,items:true,shipments:{include:{events:{orderBy:{occurredAt:"asc" as const}}}},returns:true,refunds:true,cod:true} satisfies Prisma.OrderInclude;
@@ -10,7 +11,7 @@ export const maskPhone=(v:string)=>`••••••${v.replace(/\D/g,"").slic
 export async function settings(){
   const s=await prisma.appSetting.findUniqueOrThrow({where:{key:"workflow"}});
   const source=await prisma.seedDataset.findUniqueOrThrow({where:{id:"wishluck-source"}});
-  return {...s.value as object,demoMode,demoClock:policyNow().toISOString(),policy:source.policy};
+  return {...handoverDefaults,...s.value as object,demoMode,demoClock:policyNow().toISOString(),policy:source.policy};
 }
 export async function riskFor(o:any){
   const cfg:any=await settings(),a=o.shippingAddress as any;
@@ -24,7 +25,10 @@ export async function riskFor(o:any){
 export async function orderView(o:any,detail=false){
   const risk=o.payment?.method==="COD"?await riskFor(o):undefined;
   const attempts=await prisma.paymentAttempt.findMany({where:{orderId:o.id},orderBy:{createdAt:"desc"},select:{id:true,amount:true,discount:true,status:true,purpose:true,createdAt:true}});
+  const returnRequests=await prisma.returnRequest.findMany({where:{orderId:o.id},select:{id:true,kind:true,size:true,quantity:true,refundMethod:true,refundAmount:true,status:true}});
+  const courierInstructions=await prisma.courierInstruction.findMany({where:{orderId:o.id},select:{id:true,shipmentId:true,status:true,acknowledgementId:true,createdAt:true,acknowledgedAt:true}});
   const v={id:o.id,customerId:o.customerId,customerName:o.customer.name,customerPhone:maskPhone(o.verificationPhone),status:o.status,fulfillmentStatus:o.fulfillmentStatus,paymentMethod:o.payment?.method||"",paymentStatus:o.payment?.status||"",total:Number(o.payment?.total||0),createdAt:o.createdAt.toISOString(),deliveredAt:o.deliveredAt?.toISOString()||null,scenarioTag:o.scenarioTag,isDemo:o.isDemo,origin:o.origin,paymentAttempts:attempts.map(x=>({...x,amount:Number(x.amount),discount:Number(x.discount)})),items:o.items,shippingAddress:o.shippingAddress,payment:o.payment,shipments:o.shipments,returns:o.returns.map(({sourceRecord,...x}:any)=>x),refunds:o.refunds.map(({sourceRecord,...x}:any)=>x),...(o.cod?{cod:((({sourceRecord,...c}:any)=>c)(o.cod))}:{}),...(risk?{risk}:{}),notes:o.notes,
+    returnRequests:returnRequests.map(r=>({...r,refundAmount:r.refundAmount===null?null:Number(r.refundAmount)})),courierInstructions,
     warnings:await prisma.dataQualityIssue.findMany({where:{entityId:{in:[o.id,o.customerId]}}}),
     ...(detail?{audit:await prisma.auditLog.findMany({where:{orderId:o.id},orderBy:{createdAt:"desc"},take:100})}:{})};
   v.shipments=v.shipments.map(({sourceRecord,...s}:any)=>s);
@@ -35,6 +39,13 @@ export async function orderView(o:any,detail=false){
 }
 export async function audit(t:any,actor:string,action:string,orderId:string|null,oldValue:any,newValue:any,conversationId:string|null=null){
   await t.auditLog.create({data:{actor,action,orderId,conversationId,oldValue:json(redact(oldValue??{})),newValue:json(redact(newValue??{}))}});
+}
+export function orderAuditState(o:any){
+  const a=o.shippingAddress||{};
+  return {status:o.status,fulfillmentStatus:o.fulfillmentStatus,contactSuffix:phoneDigits(o.verificationPhone||"").slice(-4),
+    deliveryLocation:{city:a.city,pincode:a.pincode,fingerprint:createHash("sha256").update(JSON.stringify(a)).digest("hex").slice(0,16)},
+    payment:o.payment?{method:o.payment.method,status:o.payment.status,total:Number(o.payment.total),discount:Number(o.payment.discount),amountDueAtDelivery:Number(o.payment.amountDueAtDelivery)}:null,
+    codStatus:o.cod?.status||null};
 }
 export async function createConversation(customerId:string){
   if(!await prisma.customer.findUnique({where:{id:customerId}}))throw new HttpError(400,"Customer not found.");
@@ -51,8 +62,16 @@ export async function handover(conversationId:string,reason:string,summary?:stri
   if(c.status==="NEEDS_HUMAN")return {success:true,message:"A support person will join this conversation."};
   await t.conversation.update({where:{id:conversationId},data:{status:"NEEDS_HUMAN",handoverReason:reason,version:{increment:1}}});
   await t.pendingAction.updateMany({where:{conversationId,status:"PENDING"},data:{status:"INVALIDATED"}});
-  await t.supportTicket.upsert({where:{conversationId},update:{status:"OPEN",reason},create:{conversationId,orderId:c.orderId,reason,sentiment:/legal|upset|threat/i.test(reason)?"UPSET":"NEUTRAL",priority:/legal|refund/i.test(reason)?"HIGH":"NORMAL",summary:summary||`Customer needs help with ${c.intent||"an unresolved request"}. ${c.orderId?`Order ${c.orderId}.`:"Order not verified."} ${redact(c.messages.find((m:any)=>m.role==="user")?.content||"Review the conversation for context.")}`,suggestedReply:"Hi, I’m from the WishLuck support team. I’ve reviewed your conversation and will help resolve this. Could you confirm the details of your concern?"}});
-  await t.message.create({data:{conversationId,role:"assistant",content:"I’m handing this to a person from our support team. They’ll review the context and join here; I’ll stop replying automatically."}});
+  const last=c.messages.find((m:any)=>m.role==="user")?.content||"No customer message recorded.";
+  const o=c.orderId?await t.order.findUnique({where:{id:c.orderId},include:{payment:true}}):null;
+  const mood=/legal|upset|threat|frustrat|angry|furious|परेशान|गुस्सा|court/i.test(reason+" "+last)?"UPSET":"NEUTRAL";
+  const groundedSummary=`Request: ${c.intent||"unresolved concern"}; language: ${c.language}; mood: ${mood}.\n${o?`Order ${o.id}: ${o.status}; ${o.payment?.method||"unknown"} ${o.payment?.status||""}.`:"Order verification pending."}\nCustomer: ${redact(last).slice(0,180)}`;
+  const suggestion=say(c.language,
+    `I’m reviewing your ${c.intent?.toLowerCase()||"support request"}${c.verifiedAt&&c.orderId?` for ${c.orderId}`:""}. ${/refund|return/i.test(reason)? "I will check the applicable policy and refund evidence before confirming next steps.":/delivery|attempt/i.test(reason)?"I will review the failed delivery and agree the next delivery step with you.":"I understand this has been frustrating. I will review what has already been tried and help with the next step."}`,
+    `मैं आपकी ${c.intent==="Refund status"?"रिफंड":"सहायता"} की समस्या और अब तक की बातचीत की समीक्षा कर रहा/रही हूँ। आगे की कार्रवाई से पहले सही विवरण और नीति की जाँच करूँगा/करूँगी।`,
+    "Main aapki problem aur ab tak ki conversation review kar raha/rahi hoon. Agla step confirm karne se pehle order aur policy check karunga/karungi.");
+  await t.supportTicket.upsert({where:{conversationId},update:{status:"OPEN",reason,summary:groundedSummary,suggestedReply:suggestion,sentiment:mood,orderId:c.orderId},create:{conversationId,orderId:c.orderId,reason,sentiment:mood,priority:/legal|refund|court/i.test(reason+" "+last)?"HIGH":"NORMAL",summary:groundedSummary,suggestedReply:suggestion}});
+  await t.message.create({data:{conversationId,role:"assistant",content:say(c.language,"I’m handing this to a person from our support team. They’ll review the context and join here; I’ll stop replying automatically.","मैं यह बातचीत हमारी सहायता टीम को सौंप रहा/रही हूँ। वे विवरण देखकर यहाँ जुड़ेंगे। अब स्वचालित जवाब बंद हैं।","Main yeh chat support team ko de raha/rahi hoon. Woh context dekhkar yahin reply karenge; ab automatic replies band hain.")}});
   await audit(t,"AI","Handed conversation to support",c.orderId,{}, {reason},conversationId);
   refresh();return {success:true,message:"Handed over to a support person."};
 }
@@ -131,7 +150,7 @@ export async function codRespond(orderId:string,input:any){
       await t.cODConfirmation.update({where:{orderId},data:{status:"CONVERTED_PREPAID"}});
       await t.order.update({where:{id:orderId},data:{status:"READY_TO_SHIP"}});message="Simulated payment succeeded. The order is prepaid with 5% off merchandise.";
     }else throw new HttpError(400,"Unknown COD response.");
-    await audit(t,"DEMO_CUSTOMER",`COD: ${input.action}`,orderId,{status:o.status,paymentStatus:o.payment.status},{message});
+    await audit(t,"DEMO_CUSTOMER",`COD: ${input.action}`,orderId,orderAuditState(o),{...orderAuditState(await t.order.findUniqueOrThrow({where:{id:orderId},include:{payment:true,cod:true}})),message});
   });refresh();return {success:true,message,...(paymentId?{paymentId}:{})};
 }
 export async function createTestOrder(input:any,webhookId?:string){
@@ -179,7 +198,10 @@ export async function courierEvent(orderId:string,input:any){
       await enqueue(t,`ndr-send:${eventId}`,"NDR_SEND",{orderId,conversationId:c.id,reason,eventId});
       await enqueue(t,`ndr-check:${eventId}`,"NDR_CHECK",{orderId,conversationId:c.id,eventId},cfg.ndrFollowupSeconds);
     }
-    if(input.status==="DELIVERED")await t.nDRCase.updateMany({where:{orderId,status:"REATTEMPT_REQUESTED"},data:{status:"SAVED_DELIVERED"}});
+    if(input.status==="DELIVERED"){
+      await t.nDRCase.updateMany({where:{orderId,status:"REATTEMPT_REQUESTED"},data:{status:"SAVED_DELIVERED"}});
+      await t.nDRCase.updateMany({where:{orderId,status:{in:["AWAITING_CUSTOMER","INSTRUCTIONS_QUEUED"]}},data:{status:"CLOSED_DELIVERED"}});
+    }
     await audit(t,"MOCK_COURIER",`Courier: ${input.status}`,orderId,{status:o.status},{status:input.status,reason});
   });refresh();return {success:true,message:duplicate?"Duplicate event acknowledged; no second mutation or notification.":"Courier event recorded. Relevant customer follow-up queued."};
 }

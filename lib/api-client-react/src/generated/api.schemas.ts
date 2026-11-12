@@ -242,6 +242,8 @@ export interface Order {
   payment?: JsonRecord;
   paymentAttempts?: JsonRecord[];
   origin?: string;
+  courierInstructions?: JsonRecord[];
+  returnRequests?: JsonRecord[];
   shipments?: JsonRecord[];
   returns?: JsonRecord[];
   refunds?: JsonRecord[];
@@ -417,6 +419,8 @@ export interface Dashboard {
 
 export interface Analytics {
   metrics: JsonRecord;
+  definitions?: JsonRecord;
+  rateCard?: JsonRecord;
   handovers: Breakdown[];
   intents: Breakdown[];
   orderStatuses: Breakdown[];
@@ -430,6 +434,11 @@ export interface Settings {
   riskMediumThreshold: number;
   demoMode: boolean;
   demoClock: string;
+  handoverRefundThreshold?: number;
+  handoverUnresolvedTurns?: number;
+  handoverToolFailures?: number;
+  handoverClarifications?: number;
+  handoverKeywords?: string[];
   policy: JsonRecord;
 }
 
@@ -459,6 +468,32 @@ export interface SettingsInput {
      * @maximum 99
      */
   riskMediumThreshold: number;
+  /**
+     * @minimum 1
+     * @maximum 1500
+     */
+  handoverRefundThreshold?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverUnresolvedTurns?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverToolFailures?: number;
+  /**
+     * @minimum 1
+     * @maximum 2
+     */
+  handoverClarifications?: number;
+  /**
+     * @maxItems 20
+     * @items.minLength 3
+     * @items.maxLength 80
+     */
+  handoverKeywords?: string[];
 }
 
 export interface DatasetReport {

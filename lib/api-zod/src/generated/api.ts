@@ -148,6 +148,8 @@ export const GetDashboardResponse = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -281,6 +283,8 @@ export const SubmitCheckoutResponse = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -316,6 +320,8 @@ export const GetOrdersResponseItem = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -359,6 +365,8 @@ export const CreateTestOrderResponse = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -393,6 +401,8 @@ export const GetOrderResponse = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -449,6 +459,8 @@ export const SimulateCustomerPaymentResponse = zod.object({
   "payment": zod.record(zod.string(), zod.unknown()).optional(),
   "paymentAttempts": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "origin": zod.string().optional(),
+  "courierInstructions": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "returnRequests": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "shipments": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "returns": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
   "refunds": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -638,6 +650,46 @@ export const UpdateConversationResponse = zod.object({
 })
 
 
+export const ResolveCustomerConversationParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ResolveCustomerConversationResponse = zod.object({
+  "id": zod.string(),
+  "customerId": zod.string(),
+  "customerName": zod.string(),
+  "customerPhone": zod.string().optional(),
+  "status": zod.string(),
+  "language": zod.string(),
+  "orderId": zod.string().nullish(),
+  "verified": zod.boolean().optional(),
+  "updatedAt": zod.string(),
+  "lastMessage": zod.string().optional(),
+  "handoverReason": zod.string().nullish(),
+  "messages": zod.array(zod.object({
+  "id": zod.string(),
+  "role": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.string()
+})),
+  "tools": zod.array(zod.record(zod.string(), zod.unknown())).optional(),
+  "pendingAction": zod.record(zod.string(), zod.unknown()).optional(),
+  "ticket": zod.object({
+  "id": zod.string(),
+  "conversationId": zod.string(),
+  "customerName": zod.string(),
+  "orderId": zod.string().nullish(),
+  "reason": zod.string(),
+  "sentiment": zod.string(),
+  "priority": zod.string(),
+  "status": zod.string(),
+  "summary": zod.string(),
+  "suggestedReply": zod.string(),
+  "createdAt": zod.string()
+}).optional()
+})
+
+
 export const SendMessageParams = zod.object({
   "id": zod.coerce.string()
 })
@@ -756,6 +808,8 @@ export const GetCustomersResponse = zod.array(GetCustomersResponseItem)
 
 export const GetAnalyticsResponse = zod.object({
   "metrics": zod.record(zod.string(), zod.unknown()),
+  "definitions": zod.record(zod.string(), zod.unknown()).optional(),
+  "rateCard": zod.record(zod.string(), zod.unknown()).optional(),
   "handovers": zod.array(zod.object({
   "name": zod.string(),
   "count": zod.number().int()
@@ -791,6 +845,11 @@ export const GetSettingsResponse = zod.object({
   "riskMediumThreshold": zod.number().int(),
   "demoMode": zod.boolean(),
   "demoClock": zod.string(),
+  "handoverRefundThreshold": zod.number().optional(),
+  "handoverUnresolvedTurns": zod.number().int().optional(),
+  "handoverToolFailures": zod.number().int().optional(),
+  "handoverClarifications": zod.number().int().optional(),
+  "handoverKeywords": zod.array(zod.string()).optional(),
   "policy": zod.record(zod.string(), zod.unknown())
 })
 
@@ -809,6 +868,19 @@ export const updateSettingsBodyRiskHighThresholdMax = 100;
 export const updateSettingsBodyRiskMediumThresholdMin = 0;
 export const updateSettingsBodyRiskMediumThresholdMax = 99;
 
+export const updateSettingsBodyHandoverRefundThresholdMax = 1500;
+
+export const updateSettingsBodyHandoverUnresolvedTurnsMax = 2;
+
+export const updateSettingsBodyHandoverToolFailuresMax = 2;
+
+export const updateSettingsBodyHandoverClarificationsMax = 2;
+
+export const updateSettingsBodyHandoverKeywordsItemMin = 3;
+export const updateSettingsBodyHandoverKeywordsItemMax = 80;
+
+export const updateSettingsBodyHandoverKeywordsMax = 20;
+
 
 
 export const UpdateSettingsBody = zod.object({
@@ -816,7 +888,12 @@ export const UpdateSettingsBody = zod.object({
   "codHoldSeconds": zod.number().int().min(updateSettingsBodyCodHoldSecondsMin).max(updateSettingsBodyCodHoldSecondsMax),
   "ndrFollowupSeconds": zod.number().int().min(updateSettingsBodyNdrFollowupSecondsMin).max(updateSettingsBodyNdrFollowupSecondsMax),
   "riskHighThreshold": zod.number().int().min(1).max(updateSettingsBodyRiskHighThresholdMax),
-  "riskMediumThreshold": zod.number().int().min(updateSettingsBodyRiskMediumThresholdMin).max(updateSettingsBodyRiskMediumThresholdMax)
+  "riskMediumThreshold": zod.number().int().min(updateSettingsBodyRiskMediumThresholdMin).max(updateSettingsBodyRiskMediumThresholdMax),
+  "handoverRefundThreshold": zod.number().min(1).max(updateSettingsBodyHandoverRefundThresholdMax).optional(),
+  "handoverUnresolvedTurns": zod.number().int().min(1).max(updateSettingsBodyHandoverUnresolvedTurnsMax).optional(),
+  "handoverToolFailures": zod.number().int().min(1).max(updateSettingsBodyHandoverToolFailuresMax).optional(),
+  "handoverClarifications": zod.number().int().min(1).max(updateSettingsBodyHandoverClarificationsMax).optional(),
+  "handoverKeywords": zod.array(zod.string().min(updateSettingsBodyHandoverKeywordsItemMin).max(updateSettingsBodyHandoverKeywordsItemMax)).max(updateSettingsBodyHandoverKeywordsMax).optional()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -827,6 +904,11 @@ export const UpdateSettingsResponse = zod.object({
   "riskMediumThreshold": zod.number().int(),
   "demoMode": zod.boolean(),
   "demoClock": zod.string(),
+  "handoverRefundThreshold": zod.number().optional(),
+  "handoverUnresolvedTurns": zod.number().int().optional(),
+  "handoverToolFailures": zod.number().int().optional(),
+  "handoverClarifications": zod.number().int().optional(),
+  "handoverKeywords": zod.array(zod.string()).optional(),
   "policy": zod.record(zod.string(), zod.unknown())
 })
 

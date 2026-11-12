@@ -9,15 +9,16 @@ export function cancellation(shipped: boolean): Decision {
 }
 export function returnEligibility(input: {
   deliveredAt: Date|null; now: Date; innerwear:boolean; sale:boolean; exchange:boolean;
-  unused:boolean; tags:boolean; stock:number; exchanges:number; returns60:number; amount:number; damaged:boolean; photo:boolean;
+  unused:boolean; tags:boolean; stock:number; exchanges:number; returns60:number; amount:number; damaged:boolean; photo:boolean;reviewThreshold?:number;
 }): Decision {
   const x=input;
   if (x.innerwear) return {eligible:false,reason:"Innerwear cannot be returned or exchanged."};
   if (!x.exchange && x.sale) return {eligible:false,reason:"Sale items cannot be refunded. A size exchange is possible within 7 days, subject to stock."};
   if (!x.deliveredAt) return {eligible:false,reason:"A return or exchange can be requested after delivery."};
   const age=x.now.getTime()-x.deliveredAt.getTime();
-  if (age<0 || age>7*86400000) return {eligible:false,reason:"The 7-day return/exchange window has expired or delivery is not yet recorded."};
-  if (x.returns60>=3 || x.amount>1500 || (x.damaged&&!x.photo)) return {eligible:false,manualReview:true,reason:"A support person must review this request: high-value refund/goodwill, repeat returns, or damage without a photo."};
+  if (age<0) return {eligible:false,reason:"Delivery is recorded in the future; support must verify the delivery date before a return."};
+  if (age>7*86400000) return {eligible:false,reason:"The 7-day return/exchange window has expired. This recorded delivery was more than 7 days ago."};
+  if (x.returns60>=3 || x.amount>Math.min(1500,x.reviewThreshold??1500) || (x.damaged&&!x.photo)) return {eligible:false,manualReview:true,reason:"A support person must review this request: high-value refund/goodwill, repeat returns, or damage without a photo."};
   if (!x.unused || !x.tags) return {eligible:false,reason:"Please confirm the item is unused and its tags are attached."};
   if (x.exchange && x.exchanges>=1) return {eligible:false,reason:"Only one size exchange per item is permitted."};
   if (x.exchange && x.stock<1) return {eligible:false,reason:"The requested size is out of stock. A support person can help with alternatives."};

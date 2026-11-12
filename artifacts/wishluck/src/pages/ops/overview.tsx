@@ -43,7 +43,7 @@ export default function Overview() {
             <Metric label="Failed deliveries" value={n('failedDeliveries')} hint={`${n('onHold')} on hold`} accent="madder" testId="metric-failed" />
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Metric label="AI resolution rate" value={pct(m.aiResolutionRate)} accent="leaf" testId="metric-ai-rate" />
+            <Metric label="AI resolution rate" value={pct(m.aiResolutionRate)} hint="Customer-confirmed, no human step-in" accent="leaf" testId="metric-ai-rate" />
             <Metric label="First response" value={secs(m.firstResponseSeconds)} accent="leaf" testId="metric-first-response" />
             <Link href="/ops/inbox" data-testid="link-go-inbox" className="flex items-center justify-between rounded-xl border bg-indigo p-4 text-paper hover:-translate-y-0.5 transition-transform"><span className="font-display text-lg">Open inbox</span><ArrowUpRight className="h-5 w-5 text-turmeric" /></Link>
             <Link href="/ops/cod" data-testid="link-go-cod" className="flex items-center justify-between rounded-xl border bg-card p-4 hover:-translate-y-0.5 transition-transform"><span className="font-display text-lg">Review COD risk</span><ArrowUpRight className="h-5 w-5 text-madder" /></Link>

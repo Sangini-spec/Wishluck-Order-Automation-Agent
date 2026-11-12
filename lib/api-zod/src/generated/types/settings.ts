@@ -15,5 +15,10 @@ export interface Settings {
   riskMediumThreshold: number;
   demoMode: boolean;
   demoClock: string;
+  handoverRefundThreshold?: number;
+  handoverUnresolvedTurns?: number;
+  handoverToolFailures?: number;
+  handoverClarifications?: number;
+  handoverKeywords?: string[];
   policy: JsonRecord;
 }

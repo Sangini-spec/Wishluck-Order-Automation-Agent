@@ -70,6 +70,11 @@ test("B8 failed delivery sends reason, accepts verified retry, updates mock cour
   assert.equal(response.requiresConfirmation,true);
   assert.equal((await prisma.nDRCase.findUniqueOrThrow({where:{eventId}})).status,"AWAITING_CUSTOMER");
   await commitPending({conversationId:c.id,customerId:o.customerId,version:c.version});
+  assert.equal((await prisma.nDRCase.findUniqueOrThrow({where:{eventId}})).status,"INSTRUCTIONS_QUEUED");
+  const instruction=await prisma.courierInstruction.findFirstOrThrow({where:{orderId:o.id}});
+  await runJob(`ndr-submit:${instruction.consentId}`);
+  await runJob(`ndr-submit:${instruction.consentId}`);
+  assert.equal((await prisma.courierInstruction.findUniqueOrThrow({where:{id:instruction.id}})).status,"ACKNOWLEDGED");
   assert.equal((await prisma.nDRCase.findUniqueOrThrow({where:{eventId}})).status,"REATTEMPT_REQUESTED");
   assert.equal(((await prisma.order.findUniqueOrThrow({where:{id:o.id}})).shippingAddress as {line1:string}).line1,"Demo office 22");
   assert.equal(await prisma.shipmentEvent.count({where:{id:{startsWith:"ndr-response-"}}})>0,true);

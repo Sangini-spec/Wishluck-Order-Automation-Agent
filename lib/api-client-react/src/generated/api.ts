@@ -2087,6 +2087,74 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getUpdateConversationMutationOptions(options), queryClient);
     }
 
+export const getResolveCustomerConversationUrl = (id: string,) => {
+
+
+
+
+  return `/api/conversations/${id}/resolve`
+}
+
+export const resolveCustomerConversation = async (id: string, options?: Parameters<typeof customFetch>[1]): Promise<Conversation> => {
+
+  return customFetch<Conversation>(getResolveCustomerConversationUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getResolveCustomerConversationMutationKey = () => ['resolveCustomerConversation'] as const;
+
+export const getResolveCustomerConversationMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerConversation>>, TError,ResolveCustomerConversationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerConversation>>, TError,ResolveCustomerConversationMutationVariables, TContext> => {
+
+const mutationKey = getResolveCustomerConversationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resolveCustomerConversation>>, ResolveCustomerConversationMutationVariables> = (props) => {
+          const {id} = props ?? {};
+
+          return  resolveCustomerConversation(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResolveCustomerConversationMutationResult = NonNullable<Awaited<ReturnType<typeof resolveCustomerConversation>>>
+
+    export type ResolveCustomerConversationMutationError = ErrorType<unknown>
+    export type ResolveCustomerConversationMutationVariables = {id: string}
+
+    export const useResolveCustomerConversation = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resolveCustomerConversation>>, TError,ResolveCustomerConversationMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resolveCustomerConversation>>,
+        TError,
+        ResolveCustomerConversationMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResolveCustomerConversationMutationOptions(options), queryClient);
+    }
+
 export const getSendMessageUrl = (id: string,) => {
 
 

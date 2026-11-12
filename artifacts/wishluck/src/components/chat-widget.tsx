@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, MessageCircle, Send, ShieldCheck, X, RotateCcw, ChevronLeft, Plus } from 'lucide-react';
-import { useCreateConversation, useGetConversation, useGetConversations, getGetConversationsQueryKey, getGetConversationQueryKey, useSendMessage } from '@workspace/api-client-react';
+import { Loader2, MessageCircle, Send, ShieldCheck, X, RotateCcw, ChevronLeft, Plus, CheckCircle2 } from 'lucide-react';
+import { useCreateConversation, useGetConversation, useGetConversations, getGetConversationsQueryKey, getGetConversationQueryKey, useSendMessage, useResolveCustomerConversation, getGetAnalyticsQueryKey } from '@workspace/api-client-react';
 import { MessageList } from '@/components/convo';
 import { Pill } from '@/components/kit';
 import { useToast } from '@/hooks/use-toast';
@@ -40,7 +40,21 @@ export function ChatWidget({ userId }: { userId: string }) {
       onError: (e) => toast({ title: 'Message not sent', description: errMsg(e), variant: 'destructive' }),
     },
   });
+  const resolve = useResolveCustomerConversation({
+    mutation: {
+      onSuccess: (r) => {
+        qc.setQueryData(getGetConversationQueryKey(r.id), r);
+        qc.invalidateQueries({ queryKey: getGetConversationsQueryKey() });
+        qc.invalidateQueries({ queryKey: getGetConversationQueryKey(r.id) });
+        qc.invalidateQueries({ queryKey: getGetAnalyticsQueryKey() });
+        toast({ title: 'Marked as resolved', description: 'Glad we could help. Start a new chat anytime.' });
+      },
+      onError: (e) => toast({ title: 'Could not resolve', description: errMsg(e), variant: 'destructive' }),
+    },
+  });
   const c = conv.data;
+  const canResolve = !!c && c.status === 'AI_HANDLING' && !c.pendingAction && !send.isPending && !resolve.isPending
+    && c.messages.some((m) => m.role === 'user') && c.messages.some((m) => m.role === 'assistant');
   const submit = () => text.trim() && cid && send.mutate({ id: cid, data: { content: text.trim(), asHuman: false } });
   const restart = () => { localStorage.removeItem(key); setCid(''); create.mutate({ data: {} }); };
 
@@ -95,6 +109,16 @@ export function ChatWidget({ userId }: { userId: string }) {
             ) : <MessageList messages={c.messages} perspective="customer" />}
             {send.isPending && <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span className="flex gap-1">{[0, 1, 2].map((i) => <span key={i} className="live-dot h-1.5 w-1.5 rounded-full bg-indigo" style={{ animationDelay: `${i * 150}ms` }} />)}</span>Assistant is checking</div>}
           </div>
+          {cid && !listing && c?.status === 'RESOLVED' && (
+            <div data-testid="status-chat-resolved" className="flex items-center gap-2 border-t bg-leaf/10 px-4 py-2 text-xs text-leaf"><CheckCircle2 className="h-4 w-4" />Resolved — thanks for confirming.</div>
+          )}
+          {cid && !listing && (canResolve || resolve.isPending) && (
+            <div className="border-t px-3 pt-2">
+              <button data-testid="button-resolve-chat" disabled={!canResolve} onClick={() => resolve.mutate({ id: c!.id })} className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-leaf/40 px-3 py-1.5 text-xs font-medium text-leaf hover:bg-leaf/10 disabled:opacity-60">
+                {resolve.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}This solved my issue
+              </button>
+            </div>
+          )}
           {cid && !listing && (
             <div className="flex gap-2 border-t p-3">
               <input data-testid="input-chat-message" value={text} onChange={(e) => setText(e.target.value)} maxLength={4000} disabled={c?.status === 'RESOLVED'}

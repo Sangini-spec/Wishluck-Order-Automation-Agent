@@ -29,3 +29,17 @@ mtime_ms = 1794480432315
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:822e26ce-b3c9-4a0d-b3b3-e2cc949098b8/eb9bdec9-2cbe-49da-a759-587d39663264/33f39e98-a2e0-4c52-b897-a5263dd5c3c0"
 storage_version_token = "1794480459494863"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "lWmIzasAZCnrTpmFO3Xtz"
+uri = "file://generated-artifacts/wishluck-evaluation-report.html"
+type = "html"
+title = "WishLuck workflow and evaluation report"
+description = "33 scenarios, 65 backend tests, browser-flow evidence, transparent recheck history and estimated token costs. Submission packaging remains deferred."
+logical_id = "2758bbb6-e179-4143-a82b-afdfac4e4b19"
+content_hash = "sha256:a9cef65cb00b629ac0be6875470f08973a31f10406b3527ddfad5827d17da94c"
+size = 16848
+mtime_ms = 1794483301540
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:822e26ce-b3c9-4a0d-b3b3-e2cc949098b8/2758bbb6-e179-4143-a82b-afdfac4e4b19/f58e5afa-69d3-4251-956d-ffad23ffd4a2"
+storage_version_token = "1794483302277037"
+content_type = "text/html"

@@ -105,6 +105,8 @@ export function OrderDetail({ order, compact }: { order: Order; compact?: boolea
   const returns = arr(order.returns);
   const refunds = arr(order.refunds);
   const audit = arr(order.audit);
+  const rreq = arr(order.returnRequests);
+  const ci = arr(order.courierInstructions);
   return (
     <div className="space-y-4">
       <Warnings order={order} />
@@ -125,6 +127,27 @@ export function OrderDetail({ order, compact }: { order: Order; compact?: boolea
             </div>
           </Panel>
           <Panel title="Shipments"><ShipmentTimeline shipments={order.shipments} /></Panel>
+          {rreq.length > 0 && (
+            <Panel title="Return and exchange requests">
+              <div className="space-y-2">{rreq.map((r, i) => (
+                <div key={str(r.id, String(i))} data-testid={`row-return-request-${str(r.id, String(i))}`} className="rounded-lg border px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-data text-xs">{str(r.id)}</span><span className="font-medium">{human(r.kind)}</span><Pill value={r.status} className="ml-auto" /></div>
+                  <div className="mt-1 font-data text-[11px] text-muted-foreground">size {str(r.size)} · qty {str(r.quantity)}{r.refundMethod != null ? ` · refund via ${human(r.refundMethod)}` : ''}{r.refundAmount != null ? ` · ${inr(r.refundAmount)}` : ''}</div>
+                </div>
+              ))}</div>
+            </Panel>
+          )}
+          {ci.length > 0 && (
+            <Panel title="Courier instructions">
+              <p className="mb-2 text-xs text-muted-foreground">Customer NDR instructions are queued first and only count as applied once the courier acknowledges them.</p>
+              <div className="space-y-2">{ci.map((r, i) => (
+                <div key={str(r.id, String(i))} data-testid={`row-courier-instruction-${str(r.id, String(i))}`} className="rounded-lg border px-3 py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2"><span className="font-data text-xs">{str(r.id)}</span>{!!r.shipmentId && <span className="font-data text-[11px] text-muted-foreground">shipment {str(r.shipmentId)}</span>}<Pill value={r.status} className="ml-auto" /></div>
+                  <div className="mt-1 font-data text-[11px] text-muted-foreground">Queued {when(r.createdAt)} · {r.acknowledgedAt ? `Acknowledged ${when(r.acknowledgedAt)}${r.acknowledgementId ? ` (${str(r.acknowledgementId)})` : ''}` : 'Awaiting courier acknowledgement'}</div>
+                </div>
+              ))}</div>
+            </Panel>
+          )}
           <Panel title="Returns and refunds">
             {returns.length === 0 && refunds.length === 0 && <p className="text-sm text-muted-foreground">No return or refund records.</p>}
             {returns.map((r, i) => (

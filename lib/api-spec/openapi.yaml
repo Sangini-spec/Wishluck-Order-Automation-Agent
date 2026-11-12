@@ -286,6 +286,17 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Conversation" }
+  /conversations/{id}/resolve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      operationId: resolveCustomerConversation
+      responses:
+        "200":
+          description: Customer explicitly marked the AI-handled conversation solved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Conversation" }
   /conversations/{id}/messages:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string } }
@@ -577,6 +588,8 @@ components:
         payment: { $ref: "#/components/schemas/JsonRecord" }
         paymentAttempts: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         origin: { type: string }
+        courierInstructions: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
+        returnRequests: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         shipments: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         returns: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
         refunds: { type: array, items: { $ref: "#/components/schemas/JsonRecord" } }
@@ -691,6 +704,8 @@ components:
       required: [metrics, handovers, intents, orderStatuses]
       properties:
         metrics: { $ref: "#/components/schemas/JsonRecord" }
+        definitions: { $ref: "#/components/schemas/JsonRecord" }
+        rateCard: { $ref: "#/components/schemas/JsonRecord" }
         handovers: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
         intents: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
         orderStatuses: { type: array, items: { $ref: "#/components/schemas/Breakdown" } }
@@ -716,6 +731,11 @@ components:
         riskMediumThreshold: { type: integer }
         demoMode: { type: boolean }
         demoClock: { type: string }
+        handoverRefundThreshold: { type: number }
+        handoverUnresolvedTurns: { type: integer }
+        handoverToolFailures: { type: integer }
+        handoverClarifications: { type: integer }
+        handoverKeywords: { type: array, items: { type: string } }
         policy: { $ref: "#/components/schemas/JsonRecord" }
     SettingsInput:
       type: object
@@ -726,6 +746,11 @@ components:
         ndrFollowupSeconds: { type: integer, minimum: 2, maximum: 86400 }
         riskHighThreshold: { type: integer, minimum: 1, maximum: 100 }
         riskMediumThreshold: { type: integer, minimum: 0, maximum: 99 }
+        handoverRefundThreshold: { type: number, minimum: 1, maximum: 1500 }
+        handoverUnresolvedTurns: { type: integer, minimum: 1, maximum: 2 }
+        handoverToolFailures: { type: integer, minimum: 1, maximum: 2 }
+        handoverClarifications: { type: integer, minimum: 1, maximum: 2 }
+        handoverKeywords: { type: array, maxItems: 20, items: { type: string, minLength: 3, maxLength: 80 } }
     DatasetReport:
       type: object
       required: [name, hash, counts, warnings, scenarios, importedAt]

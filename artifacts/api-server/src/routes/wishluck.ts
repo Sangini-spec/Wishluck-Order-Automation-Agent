@@ -12,6 +12,7 @@ import { respondAgent } from "../lib/agent";
 import { logger } from "../lib/logger";
 import { getCart,changeCart,checkoutQuote } from "../lib/cart";
 import { submitCheckout,simulateCustomerPayment } from "../lib/checkout";
+import { handoverDefaults } from "../lib/workflow-rules";
 const router=Router();router.use(cookieParser());router.use(sessionMiddleware);
 const authLimit=rateLimit({windowMs:60000,limit:30,standardHeaders:true,legacyHeaders:false,validate:{xForwardedForHeader:false},message:{error:"Too many attempts. Try again shortly."}});
 router.get("/auth/me",(req:AuthRequest,res)=>res.json(sessionInfo(req.user)));
@@ -138,12 +139,30 @@ router.post("/conversations",async(req:AuthRequest,res)=>{
   const c=await createConversation(customerId);res.status(201).json(await conversationView(c.id,req.user!.role==="TEAM"));
 });
 router.get("/conversations/:id",async(req:AuthRequest,res)=>{const id=V.GetConversationParams.parse(req.params).id;await ownConversation(req,id);res.json(await conversationView(id,req.user!.role==="TEAM"));});
+router.post("/conversations/:id/resolve",async(req:AuthRequest,res)=>{
+  customerId(req);
+  const id=V.ResolveCustomerConversationParams.parse(req.params).id;
+  await ownConversation(req,id);
+  await prisma.$transaction(async t=>{
+    await t.$queryRaw`SELECT id FROM "Conversation" WHERE id=${id} FOR UPDATE`;
+    const c=await t.conversation.findUniqueOrThrow({where:{id},include:{messages:{orderBy:{createdAt:"desc"},take:20},pendingActions:{where:{status:"PENDING",expiresAt:{gt:new Date()}}}}});
+    if(c.status==="RESOLVED"&&c.resolutionSource==="CUSTOMER_AI")return;
+    const user=c.messages.find(m=>m.role==="user"),assistant=c.messages.find(m=>m.role==="assistant");
+    if(c.status!=="AI_HANDLING"||c.pendingActions.length||(c.busyUntil&&c.busyUntil>new Date())||!user||!assistant||assistant.createdAt<user.createdAt)throw new HttpError(409,"Wait for the reply and complete any pending action before marking this solved.");
+    await t.conversation.update({where:{id},data:{status:"RESOLVED",resolvedAt:new Date(),resolutionSource:"CUSTOMER_AI",version:{increment:1}}});
+    await audit(t,"CUSTOMER","Marked conversation solved",c.orderId,{status:c.status},{status:"RESOLVED",resolutionSource:"CUSTOMER_AI"},id);
+  });
+  refresh();res.json(await conversationView(id,false));
+});
 router.patch("/conversations/:id",requireTeam,async(req:AuthRequest,res)=>{
   const id=V.UpdateConversationParams.parse(req.params).id,a=V.UpdateConversationBody.parse(req.body);await ownConversation(req,id);
   await prisma.$transaction(async t=>{
     await t.$queryRaw`SELECT id FROM "Conversation" WHERE id=${id} FOR UPDATE`;
     const status=a.action==="TAKE_OVER"?"NEEDS_HUMAN":a.action==="HAND_BACK"?"AI_HANDLING":"RESOLVED";
-    await t.conversation.update({where:{id},data:{status,version:{increment:1},busyUntil:null,...(a.action==="TAKE_OVER"?{handoverReason:"Team took over manually"}:{})}});
+    await t.conversation.update({where:{id},data:{status,version:{increment:1},busyUntil:null,
+      ...(a.action==="TAKE_OVER"?{handoverReason:"Team took over manually",hadHuman:true}:{}),
+      ...(a.action==="RESOLVE"?{resolvedAt:new Date(),resolutionSource:"TEAM"}:{resolvedAt:null,resolutionSource:null}),
+      ...(a.action==="HAND_BACK"?{unresolvedTurns:0,clarificationTurns:0,toolErrorCount:0}:{})}});
     await t.pendingAction.updateMany({where:{conversationId:id,status:"PENDING"},data:{status:"INVALIDATED"}});
     if(a.action==="RESOLVE")await t.supportTicket.updateMany({where:{conversationId:id},data:{status:"RESOLVED"}});
     if(a.action==="TAKE_OVER"){
@@ -160,8 +179,7 @@ router.post("/conversations/:id/messages",rateLimit({windowMs:60000,limit:30,val
   if(a.asHuman&&c.status!=="NEEDS_HUMAN")throw new HttpError(409,"Take over this conversation before sending a manual reply.");
   if(!a.asHuman&&c.busyUntil&&c.busyUntil>new Date())throw new HttpError(409,"Please wait for the current reply.");
   await prisma.message.create({data:{conversationId:id,role:a.asHuman?"human":"user",content:a.content}});
-  const text=a.content.toLowerCase(),intent=/refund/.test(text)?"Refund status":/exchange|size|tight/.test(text)?"Return / exchange":/return/.test(text)?"Return":/cancel/.test(text)?"Cancellation":/address|phone/.test(text)?"Contact update":/cod/.test(text)?"COD":/deliver|order|tracking|kab/.test(text)?"Order tracking":"Other";
-  await prisma.conversation.update({where:{id},data:{updatedAt:new Date(),...(!a.asHuman?{intent}:{})}});
+  await prisma.conversation.update({where:{id},data:{updatedAt:new Date(),...(a.asHuman?{hadHuman:true}:{})}});
   refresh();
   if(!a.asHuman)await respondAgent(id,a.content);
   res.json(await conversationView(id,req.user!.role==="TEAM"));
@@ -183,7 +201,9 @@ router.get("/activity",requireTeam,async(_req,res)=>res.json(json(await activity
 router.get("/dataset",requireTeam,async(_req,res)=>res.json(json(await datasetReport())));
 router.get("/settings",requireTeam,async(_req,res)=>res.json(await settings()));
 router.patch("/settings",requireTeam,async(req,res)=>{
-  const a=V.UpdateSettingsBody.parse(req.body);
+  const parsed=V.UpdateSettingsBody.parse(req.body);
+  const oldSetting=await prisma.appSetting.findUniqueOrThrow({where:{key:"workflow"}});
+  const a={...handoverDefaults,...oldSetting.value as any,...parsed};
   if(a.codHoldSeconds<=a.codReminderSeconds)throw new HttpError(400,"Hold delay must exceed reminder delay.");
   if(a.riskHighThreshold<=a.riskMediumThreshold)throw new HttpError(400,"High risk threshold must exceed medium threshold.");
   await prisma.$transaction(async t=>{

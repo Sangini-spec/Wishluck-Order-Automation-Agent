@@ -280,6 +280,13 @@ model Conversation {
   busyUntil      DateTime?
   handoverReason String?
   intent         String?
+  issueKey       String?
+  unresolvedTurns Int @default(0)
+  clarificationTurns Int @default(0)
+  toolErrorCount Int @default(0)
+  hadHuman       Boolean @default(false)
+  resolvedAt     DateTime?
+  resolutionSource String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   messages       Message[]
@@ -332,6 +339,8 @@ model ReturnRequest {
   status      String @default("REQUESTED")
   consentId   String @unique
   evidence    Json
+  refundMethod String?
+  refundAmount Decimal? @db.Decimal(12,2)
   createdAt   DateTime @default(now())
 }
 model AgentToolExecution {
@@ -392,6 +401,19 @@ model NDRCase {
   response       Json?
   eventId        String @unique
   createdAt      DateTime @default(now())
+}
+model CourierInstruction {
+  id          String @id @default(cuid())
+  consentId   String @unique
+  orderId     String
+  shipmentId  String
+  ndrCaseId   String
+  payload     Json
+  payloadHash String
+  status      String @default("QUEUED")
+  acknowledgementId String? @unique
+  createdAt   DateTime @default(now())
+  acknowledgedAt DateTime?
 }
 model PaymentAttempt {
   id        String @id @default(cuid())

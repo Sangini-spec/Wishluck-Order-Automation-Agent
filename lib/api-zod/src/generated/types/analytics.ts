@@ -10,6 +10,8 @@ import type { JsonRecord } from './jsonRecord';
 
 export interface Analytics {
   metrics: JsonRecord;
+  definitions?: JsonRecord;
+  rateCard?: JsonRecord;
   handovers: Breakdown[];
   intents: Breakdown[];
   orderStatuses: Breakdown[];
