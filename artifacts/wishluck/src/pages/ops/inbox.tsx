@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { useQueryClient } from '@tanstack/react-query';
-import { Hand, Loader2, MessageSquarePlus, MessagesSquare, RotateCcw, Search, Send, ShieldCheck, ShieldQuestion, CheckCheck } from 'lucide-react';
+import { FileText, Hand, Loader2, Save, MessageSquarePlus, MessagesSquare, RotateCcw, Search, Send, ShieldCheck, ShieldQuestion, CheckCheck } from 'lucide-react';
 import {
   useGetConversations, useGetConversation, getGetConversationQueryKey, useCreateConversation, useUpdateConversation,
-  useSendMessage, useGetCustomers, type ConversationUpdateAction,
+  useSendMessage, useUpdateTicket, useGetCustomers, type ConversationUpdateAction,
 } from '@workspace/api-client-react';
 import { PageHeader, Pill, Rows, ErrorState, Empty, Panel, KV } from '@/components/kit';
 import { MessageList, ToolTrace, PendingAction } from '@/components/convo';
@@ -65,10 +65,14 @@ function Thread({ id }: { id: string }) {
       onError: fail,
     },
   });
+  const updTicket = useUpdateTicket({ mutation: { onSuccess: () => { invalidateData(qc); toast({ title: 'Draft saved', description: 'Suggested reply updated on the ticket.' }); }, onError: fail } });
   if (error) return <ErrorState error={error} retry={refetch} />;
   if (isLoading || !c) return <Rows n={5} h="h-16" />;
   const act = (a: ConversationUpdateAction) => upd.mutate({ id, data: { action: a } });
   const submit = () => text.trim() && send.mutate({ id, data: { content: text.trim(), asHuman } });
+  const openTicket = c.ticket && c.ticket.status !== 'RESOLVED' ? c.ticket : null;
+  const loadDraft = () => { if (openTicket) { setAsHuman(true); setText(openTicket.suggestedReply); } };
+  const saveDraft = () => openTicket && updTicket.mutate({ id: openTicket.id, data: { suggestedReply: text } });
   return (
     <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
       <Panel bodyClass="p-0" className="flex min-h-[560px] flex-col">
@@ -89,6 +93,14 @@ function Thread({ id }: { id: string }) {
           {c.messages.length === 0 ? <Empty icon={<MessagesSquare className="h-6 w-6" />} title="Quiet thread" body="Type as the customer below to see how the assistant responds and which tools it calls." /> : <MessageList messages={c.messages} perspective="team" />}
         </div>
         <div className="border-t p-3">
+          {openTicket && (
+            <div data-testid="panel-ticket-draft" className="mb-2 flex flex-wrap items-center gap-2 rounded-lg border border-madder/25 bg-madder/5 px-3 py-2 text-xs">
+              <span className="font-medium text-madder">Open ticket {openTicket.id}</span>
+              <span className="min-w-0 flex-1 truncate text-muted-foreground">{openTicket.suggestedReply ? 'Suggested reply ready. Load it, edit, then save the draft or send as team.' : 'No suggested reply yet. Write one below and save it as the draft.'}</span>
+              <button data-testid="button-load-suggested-reply" disabled={!openTicket.suggestedReply} onClick={loadDraft} className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 hover:bg-accent disabled:opacity-50"><FileText className="h-3 w-3" />Load suggested reply</button>
+              <button data-testid="button-save-draft" disabled={!asHuman || !text.trim() || text === openTicket.suggestedReply || updTicket.isPending} onClick={saveDraft} className="inline-flex items-center gap-1 rounded-md border bg-card px-2 py-1 hover:bg-accent disabled:opacity-50">{updTicket.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}Save draft</button>
+            </div>
+          )}
           <div className="mb-2 inline-flex rounded-lg border bg-secondary/50 p-0.5 text-xs">
             <button data-testid="toggle-as-human" onClick={() => setAsHuman(true)} className={cn('rounded-md px-3 py-1', asHuman && 'bg-card font-medium shadow-sm')}>Reply as team</button>
             <button data-testid="toggle-as-customer" onClick={() => setAsHuman(false)} className={cn('rounded-md px-3 py-1', !asHuman && 'bg-card font-medium shadow-sm')}>Simulate customer</button>
@@ -176,7 +188,7 @@ export default function InboxPage() {
             {selected ? (
               <>
                 <button data-testid="button-back-list" onClick={() => nav('/ops/inbox')} className="mb-3 text-sm text-muted-foreground underline lg:hidden">Back to list</button>
-                <Thread id={selected} />
+                <Thread key={selected} id={selected} />
               </>
             ) : (
               <Panel><Empty icon={<MessagesSquare className="h-6 w-6" />} title="Pick a conversation" body="Select a thread to read messages, inspect tool calls and take over from the AI." /></Panel>

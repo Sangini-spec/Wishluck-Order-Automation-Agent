@@ -162,6 +162,18 @@ export function OrderDetail({ order, compact }: { order: Order; compact?: boolea
               </div>
             ))}
           </Panel>
+          {!compact && audit.length > 0 && (
+            <Panel title={<span className="flex items-center gap-2"><PackageCheck className="h-4 w-4" />Audit trail</span>}>
+              <ol className="space-y-2">
+                {audit.map((a, i) => (
+                  <li key={i} className="grid gap-1 text-sm md:grid-cols-[170px_1fr]">
+                    <span className="font-data text-[11px] text-muted-foreground">{when(a.createdAt ?? a.at)}</span>
+                    <div><span className="font-medium">{human(a.action ?? a.type)}</span>{a.detail !== undefined && <div className="mt-1"><JsonBlock value={a.detail} label="Detail" /></div>}</div>
+                  </li>
+                ))}
+              </ol>
+            </Panel>
+          )}
         </div>
         <div className="space-y-4">
           <Panel title="Payment" action={<Pill value={order.paymentStatus ?? pay.status} />}>
@@ -190,18 +202,6 @@ export function OrderDetail({ order, compact }: { order: Order; compact?: boolea
           )}
         </div>
       </div>
-      {!compact && audit.length > 0 && (
-        <Panel title={<span className="flex items-center gap-2"><PackageCheck className="h-4 w-4" />Audit trail</span>}>
-          <ol className="space-y-2">
-            {audit.map((a, i) => (
-              <li key={i} className="grid gap-1 text-sm md:grid-cols-[170px_1fr]">
-                <span className="font-data text-[11px] text-muted-foreground">{when(a.createdAt ?? a.at)}</span>
-                <div><span className="font-medium">{human(a.action ?? a.type)}</span>{a.detail !== undefined && <div className="mt-1"><JsonBlock value={a.detail} label="Detail" /></div>}</div>
-              </li>
-            ))}
-          </ol>
-        </Panel>
-      )}
     </div>
   );
 }
